@@ -333,63 +333,240 @@ class AdaptiveOptimizer:
         }
 
 class AIPerformanceOptimizer(QObject):
-    """🧠 Main AI-Powered Performance Optimization System"""
+    """🧠 Enhanced AI-Powered Performance Optimization System with Advanced ML"""
     
     # Signals for UI integration
     prediction_ready = pyqtSignal(list)  # List of PredictionResult
     optimization_applied = pyqtSignal(dict)  # Optimization stats
     learning_progress = pyqtSignal(str)  # Learning status updates
+    performance_alert = pyqtSignal(dict)  # Performance alerts
+    resource_optimized = pyqtSignal(dict)  # Resource optimization events
+    anomaly_detected = pyqtSignal(dict)  # Anomaly detection alerts
     
     def __init__(self, parent=None):
         super().__init__(parent)
         
-        # Initialize AI components
+        # Initialize enhanced AI components
         self.pattern_analyzer = UsagePatternAnalyzer()
         self.prediction_engine = PerformancePredictionEngine(self.pattern_analyzer)
         self.adaptive_optimizer = AdaptiveOptimizer()
         
+        # Enhanced ML components
+        try:
+            from .ai_enhanced_ml import get_enhanced_ml_components
+            self.enhanced_analyzer, self.enhanced_predictor = get_enhanced_ml_components()
+            self.enhanced_ml_available = True
+            print("✅ Enhanced ML components loaded")
+        except ImportError:
+            self.enhanced_ml_available = False
+            self.enhanced_analyzer = None
+            self.enhanced_predictor = None
+            print("⚠️ Enhanced ML components not available")
+        
+        # Intelligent monitoring
+        try:
+            from .ai_intelligent_monitor import get_intelligent_performance_monitor
+            self.performance_monitor = get_intelligent_performance_monitor(parent)
+            self.intelligent_monitoring_available = True
+            print("✅ Intelligent performance monitor loaded")
+        except ImportError:
+            self.performance_monitor = None
+            self.intelligent_monitoring_available = False
+            print("⚠️ Intelligent monitoring not available")
+        
+        # Smart resource management
+        try:
+            from .ai_smart_resource_manager import get_smart_resource_manager
+            self.resource_manager = get_smart_resource_manager(parent)
+            self.smart_resources_available = True
+            print("✅ Smart resource manager loaded")
+        except ImportError:
+            self.resource_manager = None
+            self.smart_resources_available = False
+            print("⚠️ Smart resource management not available")
+        
         # Learning state
         self.learning_enabled = True
         self.prediction_enabled = True
+        self.enhanced_features_enabled = True
         self.last_action = None
         
         # Monitoring timer
         self.monitor_timer = None
         self.prediction_interval = 10000  # 10 seconds
         
-        print("🧠 AI Performance Optimizer initialized")
+        # Enhanced configuration
+        self.config = {
+            'enhanced_ml_enabled': self.enhanced_ml_available,
+            'intelligent_monitoring_enabled': self.intelligent_monitoring_available,
+            'smart_resources_enabled': self.smart_resources_available,
+            'auto_optimization_level': 'adaptive',  # 'basic', 'adaptive', 'aggressive'
+            'learning_rate': 0.01,
+            'confidence_threshold': 0.6
+        }
+        
+        # Connect enhanced signals if available
+        self._connect_enhanced_signals()
+        
+        print("🧠 Enhanced AI Performance Optimizer initialized")
     
+    def _connect_enhanced_signals(self):
+        """Connect signals from enhanced AI components"""
+        try:
+            if self.performance_monitor:
+                self.performance_monitor.metrics_updated.connect(
+                    lambda metrics: self._on_performance_metrics(metrics)
+                )
+                self.performance_monitor.alert_raised.connect(
+                    lambda alert: self.performance_alert.emit(alert)
+                )
+                self.performance_monitor.anomaly_detected.connect(
+                    lambda anomaly: self.anomaly_detected.emit(anomaly)
+                )
+            
+            if self.resource_manager:
+                self.resource_manager.resource_optimized.connect(
+                    lambda opt: self.resource_optimized.emit(opt)
+                )
+                
+        except Exception as e:
+            print(f"❌ Signal connection error: {e}")
+    
+    def _on_performance_metrics(self, metrics: Dict[str, Any]):
+        """Handle performance metrics from intelligent monitor"""
+        try:
+            # Convert metrics to enhanced user action for learning
+            if self.enhanced_ml_available and self.learning_enabled:
+                from .ai_enhanced_ml import EnhancedUserAction
+                
+                action = EnhancedUserAction(
+                    action_type="performance_update",
+                    target="system",
+                    timestamp=metrics.get('timestamp', time.time()),
+                    context={
+                        'cpu_usage': metrics.get('cpu_usage', 0),
+                        'memory_usage': metrics.get('memory_usage', 0),
+                        'response_time': metrics.get('response_time', 0),
+                        'throughput': metrics.get('throughput', 0)
+                    },
+                    duration=0.0,
+                    session_id="performance_monitoring",
+                    performance_impact=self._calculate_performance_impact(metrics),
+                    user_satisfaction=self._estimate_user_satisfaction(metrics)
+                )
+                
+                self.enhanced_analyzer.record_enhanced_action(action)
+                
+        except Exception as e:
+            print(f"❌ Performance metrics handling error: {e}")
+    
+    def _calculate_performance_impact(self, metrics: Dict[str, Any]) -> float:
+        """Calculate performance impact from metrics"""
+        cpu = metrics.get('cpu_usage', 0) / 100.0
+        memory = metrics.get('memory_usage', 0) / 100.0
+        response_time = min(metrics.get('response_time', 0) / 1000.0, 1.0)  # Normalize to seconds
+        
+        # Higher values indicate negative performance impact
+        impact = (cpu * 0.4 + memory * 0.4 + response_time * 0.2)
+        return max(0.0, min(1.0, impact))
+    
+    def _estimate_user_satisfaction(self, metrics: Dict[str, Any]) -> float:
+        """Estimate user satisfaction from performance metrics"""
+        cpu = metrics.get('cpu_usage', 0)
+        memory = metrics.get('memory_usage', 0)
+        response_time = metrics.get('response_time', 0)
+        
+        # Calculate satisfaction score (inverse of performance impact)
+        if cpu < 50 and memory < 60 and response_time < 1000:
+            return 0.9  # High satisfaction
+        elif cpu < 70 and memory < 80 and response_time < 3000:
+            return 0.7  # Medium satisfaction
+        elif cpu < 90 and memory < 90 and response_time < 5000:
+            return 0.4  # Low satisfaction
+        else:
+            return 0.2  # Very low satisfaction
+
     def start_ai_optimization(self, prediction_interval: int = 10000):
-        """Start AI-powered optimization system"""
+        """Start enhanced AI-powered optimization system"""
         self.prediction_interval = prediction_interval
         
+        # Start intelligent monitoring if available
+        if self.intelligent_monitoring_available and self.performance_monitor:
+            self.performance_monitor.start_monitoring(interval=2000)  # 2 second monitoring
+            print("🔧 Intelligent performance monitoring started")
+        
+        # Start smart resource management if available
+        if self.smart_resources_available and self.resource_manager:
+            self.resource_manager.start_resource_management()
+            print("🧠 Smart resource management started")
+        
+        # Start prediction cycle
         if self.parent():
             self.monitor_timer = QTimer(self.parent())
-            self.monitor_timer.timeout.connect(self._run_prediction_cycle)
+            self.monitor_timer.timeout.connect(self._enhanced_prediction_cycle)
             self.monitor_timer.start(self.prediction_interval)
             
-            self.learning_progress.emit("🧠 AI Optimization started")
-            print("🚀 AI Performance Optimization active")
+            self.learning_progress.emit("🧠 Enhanced AI Optimization started")
+            print("🚀 Enhanced AI Performance Optimization active")
     
+    def stop_ai_optimization(self):
+        """Stop AI optimization system"""
+        if self.monitor_timer:
+            self.monitor_timer.stop()
+        
+        if self.performance_monitor:
+            self.performance_monitor.stop_monitoring()
+        
+        if self.resource_manager:
+            self.resource_manager.stop_resource_management()
+        
+        self.learning_progress.emit("⏹️ AI Optimization stopped")
+        print("⏹️ AI optimization stopped")
+
     def record_user_action(self, action_type: str, target: str, 
                           context: Optional[Dict[str, Any]] = None):
-        """Record user action for AI learning"""
+        """Record user action for both basic and enhanced AI learning"""
         if not self.learning_enabled:
             return
         
+        current_time = time.time()
+        action_context = context or {}
+        
+        # Record in basic pattern analyzer
         action = UserAction(
             action_type=action_type,
             target=target,
-            timestamp=time.time(),
-            context=context or {},
+            timestamp=current_time,
+            context=action_context,
             duration=0.0
         )
         
         self.pattern_analyzer.record_action(action)
         self.last_action = action
-    
+        
+        # Record in enhanced analyzer if available
+        if self.enhanced_ml_available and self.enhanced_analyzer:
+            try:
+                from .ai_enhanced_ml import EnhancedUserAction
+                
+                enhanced_action = EnhancedUserAction(
+                    action_type=action_type,
+                    target=target,
+                    timestamp=current_time,
+                    context=action_context,
+                    duration=action_context.get('duration', 0.0),
+                    session_id=action_context.get('session_id', 'default'),
+                    performance_impact=action_context.get('performance_impact', 0.5),
+                    user_satisfaction=action_context.get('user_satisfaction', 1.0)
+                )
+                
+                self.enhanced_analyzer.record_enhanced_action(enhanced_action)
+                
+            except Exception as e:
+                print(f"❌ Enhanced action recording error: {e}")
+
     def track_user_action(self, action_data: Dict[str, Any]):
-        """Track user action from dictionary data (for Phase 4.2 integration)"""
+        """Track user action from dictionary data with enhanced features"""
         if not self.learning_enabled:
             return
             
@@ -397,17 +574,42 @@ class AIPerformanceOptimizer(QObject):
         target = action_data.get('action', 'unknown')
         context = {
             'instance_count': action_data.get('instance_count', 0),
-            'timestamp': action_data.get('timestamp', time.time())
+            'timestamp': action_data.get('timestamp', time.time()),
+            'duration': action_data.get('duration', 0.0),
+            'performance_impact': action_data.get('performance_impact', 0.5),
+            'user_satisfaction': action_data.get('user_satisfaction', 1.0)
         }
         
         self.record_user_action(action_type, target, context)
         
-        # Train model if we have enough data
-        if len(self.pattern_analyzer.action_history) % 20 == 0:
-            self._train_model_async()
-    
+        # Enhanced ML training if enough data
+        if self.enhanced_ml_available:
+            if len(self.enhanced_analyzer.action_history) % 25 == 0:
+                self._train_enhanced_models_async()
+        else:
+            # Basic model training
+            if len(self.pattern_analyzer.action_history) % 20 == 0:
+                self._train_model_async()
+
+    def _train_enhanced_models_async(self):
+        """Train enhanced ML models asynchronously"""
+        def train():
+            try:
+                if self.enhanced_predictor:
+                    success = self.enhanced_predictor.train_enhanced_models()
+                    if success:
+                        self.learning_progress.emit("🧠 Enhanced AI Models updated")
+                        print("✅ Enhanced ML models trained successfully")
+                        
+            except Exception as e:
+                print(f"❌ Enhanced model training error: {e}")
+        
+        # Run training in background thread
+        thread = threading.Thread(target=train, daemon=True)
+        thread.start()
+
     def _train_model_async(self):
-        """Train AI model asynchronously"""
+        """Train basic AI model asynchronously"""
         def train():
             success = self.prediction_engine.train_model()
             if success:
@@ -416,22 +618,45 @@ class AIPerformanceOptimizer(QObject):
         # Run training in background thread
         thread = threading.Thread(target=train, daemon=True)
         thread.start()
-    
-    def _run_prediction_cycle(self):
-        """Run AI prediction and optimization cycle"""
+
+    def _enhanced_prediction_cycle(self):
+        """Enhanced AI prediction and optimization cycle"""
         if not self.prediction_enabled or not self.last_action:
             return
         
         try:
-            # Get predictions for next actions
-            predictions = self.prediction_engine.predict_next_actions(
-                self.last_action.action_type, num_predictions=3
-            )
+            predictions = []
+            
+            # Get enhanced predictions if available
+            if self.enhanced_ml_available and self.enhanced_predictor:
+                enhanced_predictions = self.enhanced_predictor.predict_next_actions_enhanced(
+                    self.last_action.action_type,
+                    self.last_action.context,
+                    num_predictions=3
+                )
+                
+                # Convert enhanced predictions to basic format for compatibility
+                for pred in enhanced_predictions:
+                    basic_pred = PredictionResult(
+                        action_type=pred.action_type,
+                        confidence=pred.confidence,
+                        predicted_time=pred.predicted_time,
+                        suggested_preload=pred.suggested_optimizations[:2]  # Take first 2
+                    )
+                    predictions.append(basic_pred)
+            
+            # Fallback to basic predictions
+            if not predictions:
+                predictions = self.prediction_engine.predict_next_actions(
+                    self.last_action.action_type, num_predictions=3
+                )
             
             if predictions:
                 # Apply optimizations based on predictions
                 for prediction in predictions:
-                    if prediction.confidence > 0.4:  # Only high-confidence predictions
+                    # Use higher confidence threshold for enhanced predictions
+                    confidence_threshold = self.config.get('confidence_threshold', 0.6)
+                    if prediction.confidence > confidence_threshold:
                         self.adaptive_optimizer.prepare_resources(prediction)
                 
                 # Emit signals for UI updates
@@ -441,11 +666,50 @@ class AIPerformanceOptimizer(QObject):
                 stats = self.adaptive_optimizer.get_optimization_stats()
                 self.optimization_applied.emit(stats)
                 
+                # Enhanced logging
+                if self.enhanced_ml_available:
+                    print(f"🎯 Enhanced predictions: {len(predictions)} actions predicted")
+                
         except Exception as e:
-            print(f"❌ AI prediction cycle failed: {e}")
-    
+            print(f"❌ Enhanced AI prediction cycle failed: {e}")
+
     def get_ai_insights(self) -> Dict[str, Any]:
-        """Get comprehensive AI system insights"""
+        """Get comprehensive AI system insights including enhanced features"""
+        basic_insights = self._get_basic_insights()
+        
+        # Add enhanced insights if available
+        if self.enhanced_ml_available and self.enhanced_analyzer:
+            try:
+                enhanced_insights = self.enhanced_analyzer.get_advanced_insights()
+                basic_insights['enhanced_ml'] = enhanced_insights
+                
+                if self.enhanced_predictor:
+                    model_performance = self.enhanced_predictor.get_model_performance()
+                    basic_insights['model_performance'] = model_performance
+                    
+            except Exception as e:
+                print(f"❌ Enhanced insights error: {e}")
+        
+        # Add performance monitoring insights
+        if self.intelligent_monitoring_available and self.performance_monitor:
+            try:
+                perf_summary = self.performance_monitor.get_performance_summary()
+                basic_insights['performance_monitoring'] = perf_summary
+            except Exception as e:
+                print(f"❌ Performance monitoring insights error: {e}")
+        
+        # Add resource management insights
+        if self.smart_resources_available and self.resource_manager:
+            try:
+                resource_summary = self.resource_manager.get_resource_summary()
+                basic_insights['resource_management'] = resource_summary
+            except Exception as e:
+                print(f"❌ Resource management insights error: {e}")
+        
+        return basic_insights
+    
+    def _get_basic_insights(self) -> Dict[str, Any]:
+        """Get basic AI insights"""
         pattern_insights = self.pattern_analyzer.get_pattern_insights()
         optimization_stats = self.adaptive_optimizer.get_optimization_stats()
         
@@ -455,8 +719,60 @@ class AIPerformanceOptimizer(QObject):
             'total_actions_learned': pattern_insights['recent_actions'],
             'prediction_accuracy': optimization_stats['cache_hit_rate'],
             'optimization_performance': optimization_stats,
-            'system_health': 'excellent' if optimization_stats['cache_hit_rate'] > 70 else 'good'
+            'system_health': 'excellent' if optimization_stats['cache_hit_rate'] > 70 else 'good',
+            'enhanced_features': {
+                'enhanced_ml': self.enhanced_ml_available,
+                'intelligent_monitoring': self.intelligent_monitoring_available,
+                'smart_resources': self.smart_resources_available
+            },
+            'configuration': dict(self.config)
         }
+
+    def register_component_resources(self, component_id: str, 
+                                   resource_requirements: Dict[str, Any],
+                                   priority: int = 5) -> bool:
+        """Register component with smart resource management"""
+        if self.smart_resources_available and self.resource_manager:
+            return self.resource_manager.register_component(
+                component_id, resource_requirements, priority
+            )
+        return True  # Succeed gracefully if not available
+    
+    def unregister_component_resources(self, component_id: str) -> bool:
+        """Unregister component from resource management"""
+        if self.smart_resources_available and self.resource_manager:
+            return self.resource_manager.unregister_component(component_id)
+        return True  # Succeed gracefully if not available
+
+    def set_optimization_level(self, level: str):
+        """Set AI optimization level: 'basic', 'adaptive', 'aggressive'"""
+        self.config['auto_optimization_level'] = level
+        
+        if level == 'basic':
+            self.config['confidence_threshold'] = 0.8
+            self.prediction_interval = 15000  # 15 seconds
+        elif level == 'adaptive':
+            self.config['confidence_threshold'] = 0.6
+            self.prediction_interval = 10000  # 10 seconds
+        elif level == 'aggressive':
+            self.config['confidence_threshold'] = 0.4
+            self.prediction_interval = 5000   # 5 seconds
+        
+        # Update timer if running
+        if self.monitor_timer and self.monitor_timer.isActive():
+            self.monitor_timer.setInterval(self.prediction_interval)
+        
+        self.learning_progress.emit(f"🔧 Optimization level set to {level}")
+
+    def toggle_enhanced_features(self, enabled: bool):
+        """Enable/disable enhanced AI features"""
+        self.enhanced_features_enabled = enabled
+        self.config['enhanced_ml_enabled'] = enabled and self.enhanced_ml_available
+        self.config['intelligent_monitoring_enabled'] = enabled and self.intelligent_monitoring_available
+        self.config['smart_resources_enabled'] = enabled and self.smart_resources_available
+        
+        status = "enabled" if enabled else "disabled"
+        self.learning_progress.emit(f"🧠 Enhanced AI features {status}")
     
     def toggle_learning(self, enabled: bool):
         """Enable/disable AI learning"""
