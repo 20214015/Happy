@@ -56,12 +56,15 @@ def load_fonts():
             print(f"Warning: Font directory not found at '{font_dir}'")
             return
 
-        # List of font files to load
-        fonts_to_load = [
+        # List of essential and optional font files
+        essential_fonts = [
             'Inter-Regular.ttf',
             'Inter-Bold.ttf',
             'JetBrainsMono-Regular.ttf',
-            'JetBrainsMono-Bold.ttf',
+            'JetBrainsMono-Bold.ttf'
+        ]
+        
+        optional_fonts = [
             'JetBrainsMono-Medium.ttf',
             'JetBrainsMono-Italic.ttf',
             'JetBrainsMono-Bold-Italic.ttf',
@@ -71,20 +74,31 @@ def load_fonts():
         ]
 
         loaded_count = 0
-        for font_file in fonts_to_load:
+        total_fonts = len(essential_fonts) + len(optional_fonts)
+        
+        # Load essential fonts first
+        for font_file in essential_fonts:
             font_path = os.path.join(font_dir, font_file)
             if os.path.isfile(font_path):
                 font_id = QFontDatabase.addApplicationFont(font_path)
                 if font_id != -1:
                     loaded_count += 1
                     font_families = QFontDatabase.applicationFontFamilies(font_id)
-                    print(f"Loaded font: {font_file} -> {font_families}")
+                    print(f"✅ Loaded essential font: {font_file} -> {font_families}")
                 else:
-                    print(f"Failed to load font: {font_file}")
+                    print(f"❌ Failed to load essential font: {font_file}")
             else:
-                print(f"Font file not found: {font_path}")
+                print(f"⚠️ Essential font not found: {font_path}")
+        
+        # Load optional fonts silently
+        for font_file in optional_fonts:
+            font_path = os.path.join(font_dir, font_file)
+            if os.path.isfile(font_path):
+                font_id = QFontDatabase.addApplicationFont(font_path)
+                if font_id != -1:
+                    loaded_count += 1
 
-        print(f"Successfully loaded {loaded_count}/{len(fonts_to_load)} fonts")
+        print(f"Successfully loaded {loaded_count}/{total_fonts} fonts ({len(essential_fonts)} essential, {loaded_count - len(essential_fonts)} optional)")
         
     except Exception as e:
         print(f"Error loading fonts: {e}")

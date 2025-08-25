@@ -654,7 +654,8 @@ class MonokaiTheme:
         }}
         
         QPushButton#ModernButton:hover {{
-            transform: scale(1.02);
+            padding: 8px 16px;
+            border: 2px solid #66d9ef;
         }}
         """
 

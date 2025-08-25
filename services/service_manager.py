@@ -23,6 +23,16 @@ except ImportError:
         return None
 
 
+class ServiceManagerQt(QObject):
+    """Qt-enabled ServiceManager with proper signal support"""
+    service_started = pyqtSignal(str)
+    service_stopped = pyqtSignal(str)
+    service_error = pyqtSignal(str, str)
+    
+    def __init__(self):
+        super().__init__()
+
+
 class ServiceManager:
     """
     Singleton service manager that provides unified access to all services.
@@ -54,11 +64,20 @@ class ServiceManager:
         
         # Setup Qt signals if available
         if _QT_AVAILABLE:
-            # Make this a QObject for signal support
-            self._qt_object = QObject()
-            self.service_started = self._qt_object.service_started = pyqtSignal(str)
-            self.service_stopped = self._qt_object.service_stopped = pyqtSignal(str)
-            self.service_error = self._qt_object.service_error = pyqtSignal(str, str)
+            # Create Qt object for signal support
+            self._qt_object = ServiceManagerQt()
+            # Expose signals through the Qt object
+            self.service_started = self._qt_object.service_started
+            self.service_stopped = self._qt_object.service_stopped  
+            self.service_error = self._qt_object.service_error
+        else:
+            # Create dummy signals for non-Qt environments
+            class DummySignal:
+                def emit(self, *args): pass
+                def connect(self, *args): pass
+            self.service_started = DummySignal()
+            self.service_stopped = DummySignal()
+            self.service_error = DummySignal()
         
         self._setup_services()
         
@@ -91,8 +110,7 @@ class ServiceManager:
             # Try to import optimized cache
             from optimizations.smart_cache import global_smart_cache
             self.services['cache'] = global_smart_cache
-            if _QT_AVAILABLE and hasattr(self, 'service_started'):
-                self.service_started.emit('cache')
+            self.service_started.emit('cache')
         except ImportError:
             # Fallback to simple dict cache
             self.services['cache'] = {}
@@ -103,8 +121,7 @@ class ServiceManager:
         try:
             from optimizations.ultra_database import get_ultra_database
             self.services['database'] = get_ultra_database()
-            if _QT_AVAILABLE and hasattr(self, 'service_started'):
-                self.service_started.emit('database')
+            self.service_started.emit('database')
         except ImportError:
             # Fallback to None
             self.services['database'] = None
@@ -115,8 +132,7 @@ class ServiceManager:
         try:
             from optimizations.ai_optimizer import get_ai_optimizer
             self.services['ai'] = get_ai_optimizer()
-            if _QT_AVAILABLE and hasattr(self, 'service_started'):
-                self.service_started.emit('ai')
+            self.service_started.emit('ai')
         except ImportError:
             # Fallback to None
             self.services['ai'] = None
@@ -127,8 +143,7 @@ class ServiceManager:
         try:
             from optimizations.performance_acceleration import get_acceleration_manager
             self.services['performance'] = get_acceleration_manager()
-            if _QT_AVAILABLE and hasattr(self, 'service_started'):
-                self.service_started.emit('performance')
+            self.service_started.emit('performance')
         except ImportError:
             # Fallback to None
             self.services['performance'] = None
@@ -139,8 +154,7 @@ class ServiceManager:
         try:
             from optimizations.memory_pool import get_memory_manager
             self.services['memory'] = get_memory_manager()
-            if _QT_AVAILABLE and hasattr(self, 'service_started'):
-                self.service_started.emit('memory')
+            self.service_started.emit('memory')
         except ImportError:
             # Fallback to None
             self.services['memory'] = None
@@ -181,11 +195,9 @@ class ServiceManager:
             if service is not None and hasattr(service, 'start'):
                 try:
                     service.start()
-                    if _QT_AVAILABLE and hasattr(self, 'service_started'):
-                        self.service_started.emit(name)
+                    self.service_started.emit(name)
                 except Exception as e:
-                    if _QT_AVAILABLE and hasattr(self, 'service_error'):
-                        self.service_error.emit(name, str(e))
+                    self.service_error.emit(name, str(e))
                     
     def stop_all_services(self):
         """Stop all running services"""
@@ -193,11 +205,9 @@ class ServiceManager:
             if service is not None and hasattr(service, 'stop'):
                 try:
                     service.stop()
-                    if _QT_AVAILABLE and hasattr(self, 'service_stopped'):
-                        self.service_stopped.emit(name)
+                    self.service_stopped.emit(name)
                 except Exception as e:
-                    if _QT_AVAILABLE and hasattr(self, 'service_error'):
-                        self.service_error.emit(name, str(e))
+                    self.service_error.emit(name, str(e))
 
 
 # Global service manager instance
