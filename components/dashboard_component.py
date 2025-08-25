@@ -19,10 +19,20 @@ try:
 except ImportError:
     OPTIMIZATION_AVAILABLE = False
 
-# Monokai dashboard import
+# Professional dashboard import (NEW)
+try:
+    from professional_dashboard import ProfessionalDashboard, create_professional_dashboard
+    PROFESSIONAL_DASHBOARD_AVAILABLE = True
+    print("✅ Professional dashboard available")
+except ImportError:
+    PROFESSIONAL_DASHBOARD_AVAILABLE = False
+    print("⚠️ Professional dashboard not available")
+
+# Monokai dashboard import (DEPRECATED - will be removed)
 try:
     from dashboard_monokai_refactored import MonokaiDashboard
     MONOKAI_AVAILABLE = True
+    print("⚠️ Monokai dashboard available (deprecated)")
 except ImportError:
     MONOKAI_AVAILABLE = False
 
@@ -73,24 +83,83 @@ class DashboardComponent(QObject):
         self.instances_proxy = None
         
     def create_dashboard(self) -> QWidget:
-        """Create dashboard widget với intelligent fallback"""
+        """Create dashboard widget with professional design priority"""
         
-        # Try Monokai dashboard first
+        # Try NEW Professional dashboard first (PRIORITY)
+        if PROFESSIONAL_DASHBOARD_AVAILABLE:
+            try:
+                dashboard = self._create_professional_dashboard()
+                if dashboard:
+                    self.widget = dashboard
+                    self.dashboard_created.emit(dashboard)
+                    print("✅ Professional dashboard created successfully")
+                    return dashboard
+            except Exception as e:
+                print(f"⚠️ Professional dashboard creation failed: {e}")
+        
+        # Fallback to deprecated Monokai dashboard (for compatibility)
         if MONOKAI_AVAILABLE:
             try:
                 dashboard = self._create_monokai_dashboard()
                 if dashboard:
                     self.widget = dashboard
                     self.dashboard_created.emit(dashboard)
+                    print("⚠️ Using deprecated Monokai dashboard")
                     return dashboard
             except Exception as e:
                 print(f"⚠️ Monokai dashboard creation failed: {e}")
         
-        # Fallback to standard dashboard
+        # Final fallback to standard dashboard
         dashboard = self._create_standard_dashboard()
         self.widget = dashboard
         self.dashboard_created.emit(dashboard)
+        print("⚠️ Using basic fallback dashboard")
         return dashboard
+    
+    def _create_professional_dashboard(self) -> Optional[QWidget]:
+        """Create NEW professional dashboard with modern design"""
+        try:
+            self.dashboard_widget = create_professional_dashboard(
+                parent=self.parent_window, 
+                backend_manager=self.backend_manager
+            )
+            
+            # Extract UI components for compatibility
+            self._extract_professional_components()
+            
+            # Connect optimization events if available
+            if OPTIMIZATION_AVAILABLE and hasattr(self.dashboard_widget, 'refresh_requested'):
+                self.dashboard_widget.refresh_requested.connect(
+                    lambda: emit_event(EventTypes.UI_REFRESH_REQUESTED, {})
+                )
+            
+            return self.dashboard_widget
+            
+        except Exception as e:
+            print(f"❌ Failed to create professional dashboard: {e}")
+            return None
+    
+    def _extract_professional_components(self):
+        """Extract UI components from professional dashboard"""
+        if not self.dashboard_widget:
+            return
+            
+        # Get UI components using the standard interface
+        components = self.dashboard_widget.get_ui_components()
+        
+        # Extract components for compatibility
+        self.search_edit = components.get('search_edit')
+        self.filter_combo = components.get('filter_combo')
+        self.refresh_btn = components.get('refresh_btn')
+        self.btn_auto_refresh = components.get('btn_auto_refresh')
+        self.btn_select_all = components.get('btn_select_all')
+        self.btn_deselect_all = components.get('btn_deselect_all')
+        
+        # Extract table and models
+        self.table = components.get('table')
+        self.instances_model = components.get('instances_model')
+        self.instances_proxy = components.get('instances_proxy')
+        self.ai_tracker_status = components.get('ai_tracker_status')
     
     def _create_monokai_dashboard(self) -> Optional[QWidget]:
         """Create enhanced Monokai dashboard"""
@@ -273,5 +342,18 @@ class DashboardComponent(QObject):
 
 # Factory function
 def create_dashboard_component(parent_window, backend_manager) -> DashboardComponent:
-    """Factory function để create dashboard component"""
-    return DashboardComponent(parent_window, backend_manager)
+    """
+    Factory function to create professional dashboard component.
+    
+    Prioritizes professional dashboard design over legacy themes.
+    """
+    print("🏗️ Creating professional dashboard component...")
+    component = DashboardComponent(parent_window, backend_manager)
+    dashboard_widget = component.create_dashboard()
+    
+    if dashboard_widget:
+        print("✅ Professional dashboard component created successfully")
+    else:
+        print("❌ Failed to create dashboard component")
+    
+    return component

@@ -19,12 +19,18 @@ except ImportError:
             pass
 
 
-class StateManagerQt(QObject):
-    """Qt-enabled StateManager with proper signal support"""
-    instances_changed = pyqtSignal(list)
-    selection_changed = pyqtSignal(list)
-    ui_changed = pyqtSignal(dict)
-    automation_changed = pyqtSignal(dict)
+if _QT_AVAILABLE:
+    class StateManagerQt(QObject):
+        """Qt-enabled StateManager with proper signal support"""
+        instances_changed = pyqtSignal(list)
+        selection_changed = pyqtSignal(list)
+        ui_changed = pyqtSignal(dict)
+        automation_changed = pyqtSignal(dict)
+else:
+    class StateManagerQt:
+        """Fallback StateManager without Qt signals"""
+        def __init__(self):
+            pass
     
     def __init__(self):
         super().__init__()

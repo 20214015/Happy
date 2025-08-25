@@ -4,7 +4,6 @@ from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import QSettings
 from PyQt6.QtGui import QFontDatabase
 
-# Import optimized modules
 # EXE-specific initialization
 if hasattr(sys, '_MEIPASS'):
     # Running from PyInstaller bundle
@@ -23,6 +22,7 @@ if hasattr(sys, '_MEIPASS'):
     os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = platforms_dir
     
     print(f"EXE Mode: Qt plugins path set to {platforms_dir}")
+
 try:
     from optimizations.app_config import AppConstants, app_config
     from error_handler import global_error_handler, setup_global_exception_handler
@@ -31,15 +31,15 @@ try:
     from constants import ORG_NAME, APP_NAME
     from main_window import MainWindow
     
-    # Import theme module
-    from theme import AppTheme
+    # Import NEW professional theme instead of old theme
+    from professional_theme import apply_professional_theme
         
 except ImportError as e:
     print(f"Import error: {e}")
     sys.exit(1)
 
-def load_fonts():
-    """Load custom fonts from assets folder."""
+def load_professional_fonts():
+    """Load professional fonts from assets folder."""
     try:
         # Determine relative path to assets/fonts folder
         # Works for both direct execution and PyInstaller packaging
@@ -56,52 +56,35 @@ def load_fonts():
             print(f"Warning: Font directory not found at '{font_dir}'")
             return
 
-        # List of essential and optional font files
-        essential_fonts = [
-            'Inter-Regular.ttf',
-            'Inter-Bold.ttf',
-            'JetBrainsMono-Regular.ttf',
-            'JetBrainsMono-Bold.ttf'
-        ]
-        
-        optional_fonts = [
-            'JetBrainsMono-Medium.ttf',
-            'JetBrainsMono-Italic.ttf',
-            'JetBrainsMono-Bold-Italic.ttf',
-            'JetBrainsMono-Medium-Italic.ttf',
-            'JetBrainsMono-ExtraBold.ttf',
-            'JetBrainsMono-ExtraBold-Italic.ttf'
+        # Professional fonts for business interface
+        professional_fonts = [
+            'Inter-Regular.ttf',    # Primary UI font
+            'Inter-Bold.ttf',       # Bold variant
+            'JetBrainsMono-Regular.ttf',  # Monospace for data display
+            'JetBrainsMono-Bold.ttf'      # Monospace bold
         ]
 
         loaded_count = 0
-        total_fonts = len(essential_fonts) + len(optional_fonts)
+        total_fonts = len(professional_fonts)
         
-        # Load essential fonts first
-        for font_file in essential_fonts:
+        # Load professional fonts
+        for font_file in professional_fonts:
             font_path = os.path.join(font_dir, font_file)
             if os.path.isfile(font_path):
                 font_id = QFontDatabase.addApplicationFont(font_path)
                 if font_id != -1:
                     loaded_count += 1
                     font_families = QFontDatabase.applicationFontFamilies(font_id)
-                    print(f"✅ Loaded essential font: {font_file} -> {font_families}")
+                    print(f"✅ Loaded professional font: {font_file} -> {font_families}")
                 else:
-                    print(f"❌ Failed to load essential font: {font_file}")
+                    print(f"❌ Failed to load font: {font_file}")
             else:
-                print(f"⚠️ Essential font not found: {font_path}")
-        
-        # Load optional fonts silently
-        for font_file in optional_fonts:
-            font_path = os.path.join(font_dir, font_file)
-            if os.path.isfile(font_path):
-                font_id = QFontDatabase.addApplicationFont(font_path)
-                if font_id != -1:
-                    loaded_count += 1
+                print(f"⚠️ Font not found: {font_path}")
 
-        print(f"Successfully loaded {loaded_count}/{total_fonts} fonts ({len(essential_fonts)} essential, {loaded_count - len(essential_fonts)} optional)")
+        print(f"Successfully loaded {loaded_count}/{total_fonts} professional fonts")
         
     except Exception as e:
-        print(f"Error loading fonts: {e}")
+        print(f"Error loading professional fonts: {e}")
 
 if __name__ == "__main__":
     # Setup global error handling first
@@ -119,9 +102,9 @@ if __name__ == "__main__":
     settings = QSettings()
     app_config.update_from_qsettings(settings)
     
-    # Apply theme
-    print("✅ Applying theme...")
-    AppTheme.apply_theme(app, settings)
+    # Apply NEW professional theme
+    print("✅ Applying professional theme...")
+    apply_professional_theme(app)
     
     try:
         # Create main window
@@ -143,9 +126,9 @@ if __name__ == "__main__":
         window.show()
         print("✅ MainWindow shown, starting app loop...")
 
-        # Defer font loading to a background thread for faster startup
+        # Defer professional font loading to a background thread for faster startup
         worker_manager = get_global_worker_manager(app)
-        worker_manager.submit_task("load_fonts", load_fonts)
+        worker_manager.submit_task("load_professional_fonts", load_professional_fonts)
 
         exit_code = app.exec()
         
