@@ -98,8 +98,9 @@ from log_settings_dialog import LogSettingsDialog
 # =====================================================================
 from ui import (
     ModernButton, ModernCard, ModernProgressBar, ModernTable, 
-    DesignTokens, SmartCache
+    DesignTokens
 )
+from ui.performance import SmartCache as UISmartCache, AsyncTaskManager
 
 # =====================================================================
 # ADVANCED OPTIMIZATIONS - PERFORMANCE SYSTEMS
@@ -184,7 +185,7 @@ class MainWindow(QMainWindow, MainWindowOptimizationMixin):
         self.mumu_manager = MumuManager(self.settings.value("manager_path", ""))
         
         # 🚀 SMART CACHE - Performance optimization với intelligent caching và persistence
-        self.smart_cache = SmartCache(persistent=True)  # Enable persistence
+        self.smart_cache = global_smart_cache  # Use global instance for consistency
         # Cache logging sẽ được handle bởi log widget sau khi init
         self.smart_cache.cache_hit.connect(self._on_cache_hit)
         self.smart_cache.cache_miss.connect(self._on_cache_miss)

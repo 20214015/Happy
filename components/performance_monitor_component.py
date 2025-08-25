@@ -6,7 +6,6 @@ Advanced performance monitoring and analytics cho production deployment.
 """
 
 import time
-import psutil
 import threading
 from typing import Optional, Dict, Any, List, Callable
 from dataclasses import dataclass, field
@@ -15,9 +14,22 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                             QTabWidget, QPushButton, QTextEdit)
 from PyQt6.QtCore import pyqtSignal, QObject, Qt, QTimer, QThread
 from PyQt6.QtGui import QFont
-from PyQt6.QtCharts import QChart, QChartView, QLineSeries, QValueAxis
 import json
 from datetime import datetime, timedelta
+
+# Try importing psutil for system metrics
+try:
+    import psutil
+    PSUTIL_AVAILABLE = True
+except ImportError:
+    PSUTIL_AVAILABLE = False
+
+# Try importing charts for advanced visualization
+try:
+    from PyQt6.QtCharts import QChart, QChartView, QLineSeries, QValueAxis
+    CHARTS_AVAILABLE = True
+except ImportError:
+    CHARTS_AVAILABLE = False
 
 # Optimization imports
 try:
