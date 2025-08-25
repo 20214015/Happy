@@ -1,0 +1,142 @@
+{
+  "deployment_info": {
+    "version": "3.0.0-production",
+    "deployment_date": "2025-08-25T20:13:33.310578",
+    "components": {},
+    "optimizations": {},
+    "health_status": "unknown"
+  },
+  "phase_verification": {
+    "Phase 1": {
+      "status": "verified",
+      "description": "Service Integration (ServiceManager, EventManager, StateManager)"
+    },
+    "Phase 2": {
+      "status": "verified",
+      "description": "Modular Components (Dashboard, Control Panel, Status)"
+    },
+    "Phase 3": {
+      "status": "issues",
+      "description": "Production Features (Performance Monitor, Settings, Deployment)"
+    },
+    "Integration": {
+      "status": "verified"
+    }
+  },
+  "components_status": {
+    "services/service_manager.py": {
+      "status": "verified",
+      "description": "ServiceManager - Centralized service management",
+      "size_kb": 7.8,
+      "phase": "Phase 1"
+    },
+    "core/event_manager.py": {
+      "status": "verified",
+      "description": "EventManager - Event-driven architecture",
+      "size_kb": 4.27,
+      "phase": "Phase 1"
+    },
+    "core/state_manager.py": {
+      "status": "verified",
+      "description": "StateManager - Centralized state management",
+      "size_kb": 9.15,
+      "phase": "Phase 1"
+    },
+    "main_window_integration_patch.py": {
+      "status": "verified",
+      "description": "Integration patch for existing code",
+      "size_kb": 19.82,
+      "phase": "Phase 1"
+    },
+    "components/dashboard_component.py": {
+      "status": "verified",
+      "description": "Dashboard Component - Modular dashboard with Monokai theme",
+      "size_kb": 10.83,
+      "phase": "Phase 2"
+    },
+    "components/control_panel_component.py": {
+      "status": "verified",
+      "description": "Control Panel Component - Organized button management",
+      "size_kb": 12.78,
+      "phase": "Phase 2"
+    },
+    "components/status_component.py": {
+      "status": "verified",
+      "description": "Status Component - Real-time status monitoring",
+      "size_kb": 12.04,
+      "phase": "Phase 2"
+    },
+    "components/performance_monitor_component.py": {
+      "status": "verified",
+      "description": "Performance Monitor - Real-time system monitoring",
+      "size_kb": 22.12,
+      "phase": "Phase 3"
+    },
+    "components/settings_component.py": {
+      "status": "verified",
+      "description": "Settings Management - User preferences and configuration",
+      "size_kb": 29.36,
+      "phase": "Phase 3"
+    },
+    "phase3_demo.py": {
+      "status": "missing",
+      "description": "Phase 3 Demo - Integration testing application",
+      "phase": "Phase 3"
+    }
+  },
+  "health_check": {
+    "system_requirements": {
+      "status": "warning",
+      "cpu_cores": 4,
+      "memory_gb": 15.6,
+      "python_version": "3.12.3",
+      "requirements_met": false
+    },
+    "dependency_check": {
+      "status": "good",
+      "available": [
+        "PyQt6",
+        "psutil",
+        "numpy",
+        "matplotlib"
+      ],
+      "missing": [],
+      "required_available": true
+    },
+    "memory_usage": {
+      "status": "good",
+      "total_mb": 60,
+      "breakdown": {
+        "Phase 1 Services": 5,
+        "Phase 2 Components": 8,
+        "Phase 3 Components": 12,
+        "UI Framework": 15,
+        "Base Application": 20
+      }
+    },
+    "component_load_test": {
+      "status": "good",
+      "tests": {
+        "Phase 1": {
+          "status": "good",
+          "load_time": 7.42
+        },
+        "Phase 2": {
+          "status": "good",
+          "load_time": 29.02
+        },
+        "Phase 3": {
+          "status": "good",
+          "load_time": 5.63
+        }
+      }
+    },
+    "overall_score": "3/4",
+    "health_status": "warning"
+  },
+  "overall_status": "needs_attention",
+  "recommendations": [
+    "🔧 Fix Phase 3 production component issues",
+    "⚠️ Address performance health warnings"
+  ]
+}
