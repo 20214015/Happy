@@ -68,21 +68,31 @@ from workers import (
 from widgets import StatusPillDelegate, InstancesModel, InstancesProxy
 from dialogs import SettingsDialog
 from settings_editor import SettingsEditorDialog
-from monokai_automation_page import MonokaiAutomationPage
+# PROFESSIONAL IMPORTS - NEW BUSINESS INTERFACE
+try:
+    from professional_icons import get_professional_icon as get_icon
+    PROFESSIONAL_ICONS_AVAILABLE = True
+except ImportError:
+    PROFESSIONAL_ICONS_AVAILABLE = False
+    # Fallback icon function
+    def get_icon(name, color=None):
+        return QIcon()  # Return empty icon
 
 # =====================================================================
-# APPLICATION MODULES - MONOKAI THEME INTEGRATION
+# APPLICATION MODULES - PROFESSIONAL INTERFACE 
 # =====================================================================
-# Enhanced Monokai theme components
+# Removed old Monokai components - now using professional design
+MONOKAI_AVAILABLE = False  # Deprecated
+print("ℹ️ Using professional interface design")
+# PROFESSIONAL ICONS - NEW BUSINESS INTERFACE
 try:
-    from dashboard_monokai import MonokaiDashboard
-    from monokai_theme import MonokaiTheme, apply_monokai_theme
-    MONOKAI_AVAILABLE = True
-    print("✅ Monokai theme components loaded successfully")
-except ImportError as e:
-    print(f"⚠️ Monokai components not available: {e}")
-    MONOKAI_AVAILABLE = False
-from feather_icons import get_icon
+    from professional_icons import get_professional_icon as get_icon
+    PROFESSIONAL_ICONS_AVAILABLE = True
+except ImportError:
+    PROFESSIONAL_ICONS_AVAILABLE = False
+    # Fallback icon function
+    def get_icon(name, color=None):
+        return QIcon()  # Return empty icon
 
 # =====================================================================
 # APPLICATION MODULES - LOGGING SYSTEM

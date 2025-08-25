@@ -28,13 +28,7 @@ except ImportError:
     PROFESSIONAL_DASHBOARD_AVAILABLE = False
     print("⚠️ Professional dashboard not available")
 
-# Monokai dashboard import (DEPRECATED - will be removed)
-try:
-    from dashboard_monokai_refactored import MonokaiDashboard
-    MONOKAI_AVAILABLE = True
-    print("⚠️ Monokai dashboard available (deprecated)")
-except ImportError:
-    MONOKAI_AVAILABLE = False
+# Fallback - MonokaiDashboard no longer available (removed)
 
 class DashboardComponent(QObject):
     """
@@ -97,17 +91,8 @@ class DashboardComponent(QObject):
             except Exception as e:
                 print(f"⚠️ Professional dashboard creation failed: {e}")
         
-        # Fallback to deprecated Monokai dashboard (for compatibility)
-        if MONOKAI_AVAILABLE:
-            try:
-                dashboard = self._create_monokai_dashboard()
-                if dashboard:
-                    self.widget = dashboard
-                    self.dashboard_created.emit(dashboard)
-                    print("⚠️ Using deprecated Monokai dashboard")
-                    return dashboard
-            except Exception as e:
-                print(f"⚠️ Monokai dashboard creation failed: {e}")
+        # Fallback to deprecated Monokai dashboard (removed - no longer available)
+        print("⚠️ Monokai dashboard no longer available - removed for professional redesign")
         
         # Final fallback to standard dashboard
         dashboard = self._create_standard_dashboard()
@@ -161,42 +146,7 @@ class DashboardComponent(QObject):
         self.instances_proxy = components.get('instances_proxy')
         self.ai_tracker_status = components.get('ai_tracker_status')
     
-    def _create_monokai_dashboard(self) -> Optional[QWidget]:
-        """Create enhanced Monokai dashboard"""
-        try:
-            self.dashboard_widget = MonokaiDashboard(self.parent_window)
-            self.dashboard_widget.set_backend(self.backend_manager)
-            
-            # Extract UI components for compatibility
-            self._extract_monokai_components()
-            
-            # Connect signals
-            self._connect_monokai_signals()
-            
-            print("📊 Monokai dashboard created successfully!")
-            return self.dashboard_widget
-            
-        except Exception as e:
-            print(f"❌ Monokai dashboard creation error: {e}")
-            return None
     
-    def _extract_monokai_components(self):
-        """Extract UI components from Monokai dashboard"""
-        if not self.dashboard_widget:
-            return
-            
-        # Extract controls for compatibility
-        self.search_edit = getattr(self.dashboard_widget, 'search_edit', None)
-        self.filter_combo = getattr(self.dashboard_widget, 'filter_combo', None)
-        self.refresh_btn = getattr(self.dashboard_widget, 'refresh_btn', None)
-        self.btn_auto_refresh = getattr(self.dashboard_widget, 'btn_auto_refresh', None)
-        self.btn_select_all = getattr(self.dashboard_widget, 'btn_select_all', None)
-        self.btn_deselect_all = getattr(self.dashboard_widget, 'btn_deselect_all', None)
-        
-        # Extract table and models
-        self.table = getattr(self.dashboard_widget, 'instance_table', None)
-        self.instances_model = getattr(self.dashboard_widget, 'instances_model', None)
-        self.instances_proxy = getattr(self.dashboard_widget, 'instances_proxy', None)
     
     def _connect_monokai_signals(self):
         """Connect Monokai dashboard signals to component signals"""
