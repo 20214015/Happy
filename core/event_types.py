@@ -28,6 +28,16 @@ class EventTypes(Enum):
     TAB_CHANGED = auto()
     THEME_CHANGED = auto()
     UI_STATE_CHANGED = auto()
+    UI_PAGE_CHANGED = auto()
+    UI_RENDER_TIME = auto()
+    
+    # Progress Events
+    PROGRESS_UPDATE = auto()
+    
+    # Logging Events
+    LOG_ERROR = auto()
+    LOG_INFO = auto()
+    LOG_WARNING = auto()
     
     # Application Events
     APP_STARTING = auto()
@@ -58,6 +68,18 @@ class EventTypes(Enum):
     APK_INSTALLED = auto()
     PACKAGE_UNINSTALLED = auto()
     FILE_SELECTED = auto()
+    
+    # Component Events
+    COMPONENT_LOADED = auto()
+    COMPONENT_UNLOADED = auto()
+    COMPONENT_ERROR = auto()
+    
+    # Status Events
+    STATUS_UPDATE = auto()
+    STATUS_CHANGED = auto()
+    
+    # Refresh Events
+    INSTANCES_REFRESHED = auto()
     
     # Custom Events
     CUSTOM_EVENT = auto()

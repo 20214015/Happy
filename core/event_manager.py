@@ -142,3 +142,14 @@ def emit_event(event_type: EventTypes, data: Dict[str, Any] = None):
         data: Optional data to pass to subscribers
     """
     get_event_manager().emit(event_type, data)
+
+
+def subscribe_event(event_type: EventTypes, callback: Callable[[Dict[str, Any]], None]):
+    """
+    Convenience function to subscribe to an event.
+    
+    Args:
+        event_type: The event type to subscribe to
+        callback: Function to call when event is emitted
+    """
+    get_event_manager().subscribe(event_type, callback)
