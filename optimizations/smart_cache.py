@@ -73,7 +73,7 @@ class SmartCache(QObject):
         """Estimate memory size of data"""
         try:
             return len(json.dumps(data, default=str).encode())
-        except:
+        except (TypeError, ValueError, OverflowError):
             return len(str(data).encode())
     
     def _evict_if_needed(self, required_size: int):

@@ -219,19 +219,6 @@ class AppConfig:
             # Ensure we have valid defaults
             self._load_defaults()
             self.validate_config()
-            
-            # UI settings  
-            self.set("ui.theme",
-                    qsettings.value("ui/theme", AppConstants.Theme.DEFAULT_THEME))
-                    
-            # Logging settings
-            self.set("logging.level",
-                    qsettings.value("logging/level", AppConstants.Logging.DEFAULT_LOG_LEVEL))
-            self.set("logging.max_entries",
-                    qsettings.value("logging/max_entries", AppConstants.Logging.MAX_LOG_ENTRIES, type=int))
-                    
-        except Exception as e:
-            print(f"Warning: Failed to load some settings: {e}")
     
     def save_to_qsettings(self, qsettings):
         """Save configuration to QSettings"""
@@ -239,11 +226,15 @@ class AppConfig:
             qsettings.setValue("performance/enable_caching", self.get("performance.enable_caching"))
             qsettings.setValue("auto_refresh/enabled", self.get("ui.auto_refresh_enabled"))
             qsettings.setValue("auto_refresh/interval", self.get("ui.auto_refresh_interval"))
-            qsettings.setValue("ui/theme", self.get("ui.theme"))
-            qsettings.setValue("logging/level", self.get("logging.level"))
-            qsettings.setValue("logging/max_entries", self.get("logging.max_entries"))
+            qsettings.setValue("theme/name", self.get("ui.theme"))
+            qsettings.setValue("performance/worker_pool_size", self.get("performance.worker_pool_size"))
         except Exception as e:
             print(f"Warning: Failed to save some settings: {e}")
+    
+    def clear_config(self):
+        """Clear configuration cache"""
+        self._config.clear()
+        self._load_defaults()
 
 # Global config instance
 app_config = AppConfig()
