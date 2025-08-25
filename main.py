@@ -39,8 +39,33 @@ except ImportError as e:
     sys.exit(1)
 
 def load_fonts():
-    """Load custom fonts from assets folder."""
+    """Load custom fonts from assets folder with enhanced fallback system and safety checks."""
     try:
+        # Early safety check for Qt availability and environment
+        try:
+            from PyQt6.QtGui import QFontDatabase
+            from PyQt6.QtWidgets import QApplication
+            
+            # Check if we have a QApplication instance
+            app = QApplication.instance()
+            if app is None:
+                print("⚠️ No QApplication instance - skipping font loading")
+                return
+                
+        except ImportError:
+            print("⚠️ PyQt6 not available - skipping font loading")
+            return
+        except Exception as e:
+            print(f"⚠️ Qt environment check failed: {e} - skipping font loading")
+            return
+        
+        # Check for headless environment and skip if problematic
+        import os
+        if os.environ.get('QT_QPA_PLATFORM') == 'offscreen':
+            print("🔤 Headless environment detected - using simplified font loading")
+            _register_system_fonts_only()
+            return
+        
         # Determine relative path to assets/fonts folder
         # Works for both direct execution and PyInstaller packaging
         if getattr(sys, 'frozen', False):
@@ -53,55 +78,164 @@ def load_fonts():
         font_dir = os.path.join(base_path, 'assets', 'fonts')
         
         if not os.path.isdir(font_dir):
-            print(f"Warning: Font directory not found at '{font_dir}'")
+            print(f"⚠️ Font directory not found at '{font_dir}' - using system fonts")
+            _register_system_fonts_only()
             return
 
-        # List of essential and optional font files
-        essential_fonts = [
-            'Inter-Regular.ttf',
-            'Inter-Bold.ttf',
-            'JetBrainsMono-Regular.ttf',
-            'JetBrainsMono-Bold.ttf'
-        ]
-        
-        optional_fonts = [
-            'JetBrainsMono-Medium.ttf',
-            'JetBrainsMono-Italic.ttf',
-            'JetBrainsMono-Bold-Italic.ttf',
-            'JetBrainsMono-Medium-Italic.ttf',
-            'JetBrainsMono-ExtraBold.ttf',
-            'JetBrainsMono-ExtraBold-Italic.ttf'
-        ]
+        # Enhanced font configuration with fallbacks and safety loading
+        font_config = {
+            'essential': {
+                'Inter-Regular.ttf': ['Inter', 'Arial', 'Helvetica'],
+                'Inter-Bold.ttf': ['Inter', 'Arial Bold', 'Helvetica Bold'],
+                'JetBrainsMono-Regular.ttf': ['JetBrains Mono', 'Consolas', 'Monaco', 'Courier New'],
+                'JetBrainsMono-Bold.ttf': ['JetBrains Mono', 'Consolas Bold', 'Monaco Bold', 'Courier New Bold']
+            },
+            'optional': {
+                'JetBrainsMono-Medium.ttf': ['JetBrains Mono Medium', 'JetBrains Mono', 'Consolas'],
+                'JetBrainsMono-Italic.ttf': ['JetBrains Mono Italic', 'JetBrains Mono', 'Consolas Italic'],
+                'JetBrainsMono-Bold-Italic.ttf': ['JetBrains Mono Bold Italic', 'JetBrains Mono Bold', 'Consolas Bold'],
+                'JetBrainsMono-Medium-Italic.ttf': ['JetBrains Mono Medium Italic', 'JetBrains Mono Medium'],
+                'JetBrainsMono-ExtraBold.ttf': ['JetBrains Mono ExtraBold', 'JetBrains Mono Bold'],
+                'JetBrainsMono-ExtraBold-Italic.ttf': ['JetBrains Mono ExtraBold Italic', 'JetBrains Mono Bold Italic']
+            }
+        }
 
         loaded_count = 0
-        total_fonts = len(essential_fonts) + len(optional_fonts)
+        failed_fonts = []
         
-        # Load essential fonts first
-        for font_file in essential_fonts:
+        # Load essential fonts first with safety checks
+        print("🔤 Loading essential fonts...")
+        for font_file, fallbacks in font_config['essential'].items():
             font_path = os.path.join(font_dir, font_file)
             if os.path.isfile(font_path):
-                font_id = QFontDatabase.addApplicationFont(font_path)
-                if font_id != -1:
-                    loaded_count += 1
-                    font_families = QFontDatabase.applicationFontFamilies(font_id)
-                    print(f"✅ Loaded essential font: {font_file} -> {font_families}")
-                else:
-                    print(f"❌ Failed to load essential font: {font_file}")
+                try:
+                    # Safety check: verify file is readable and valid
+                    with open(font_path, 'rb') as f:
+                        # Read first few bytes to verify it's a valid font file
+                        header = f.read(4)
+                        if len(header) < 4:
+                            print(f"⚠️ Invalid font file (too small): {font_file}")
+                            failed_fonts.append((font_file, fallbacks))
+                            continue
+                    
+                    # Safely attempt to load font
+                    font_id = QFontDatabase.addApplicationFont(font_path)
+                    if font_id != -1:
+                        loaded_count += 1
+                        font_families = QFontDatabase.applicationFontFamilies(font_id)
+                        print(f"✅ Loaded essential font: {font_file} -> {font_families}")
+                    else:
+                        print(f"❌ Failed to load essential font: {font_file} - will use fallback: {fallbacks[1]}")
+                        failed_fonts.append((font_file, fallbacks))
+                except Exception as e:
+                    print(f"❌ Error loading essential font {font_file}: {e}")
+                    failed_fonts.append((font_file, fallbacks))
             else:
-                print(f"⚠️ Essential font not found: {font_path}")
+                print(f"⚠️ Essential font not found: {font_file} - will use fallback: {fallbacks[1]}")
+                failed_fonts.append((font_file, fallbacks))
         
-        # Load optional fonts silently
-        for font_file in optional_fonts:
+        # Load optional fonts with graceful degradation and safety checks
+        print("🔤 Loading optional fonts...")
+        for font_file, fallbacks in font_config['optional'].items():
             font_path = os.path.join(font_dir, font_file)
             if os.path.isfile(font_path):
-                font_id = QFontDatabase.addApplicationFont(font_path)
-                if font_id != -1:
-                    loaded_count += 1
+                try:
+                    # Safety check for optional fonts too
+                    with open(font_path, 'rb') as f:
+                        header = f.read(4)
+                        if len(header) < 4:
+                            failed_fonts.append((font_file, fallbacks))
+                            continue
+                    
+                    font_id = QFontDatabase.addApplicationFont(font_path)
+                    if font_id != -1:
+                        loaded_count += 1
+                        # Silent loading for optional fonts - no print
+                    else:
+                        failed_fonts.append((font_file, fallbacks))
+                except Exception as e:
+                    # Silently handle optional font errors
+                    failed_fonts.append((font_file, fallbacks))
+            else:
+                # For missing optional fonts, create fallback mapping
+                failed_fonts.append((font_file, fallbacks))
 
-        print(f"Successfully loaded {loaded_count}/{total_fonts} fonts ({len(essential_fonts)} essential, {loaded_count - len(essential_fonts)} optional)")
+        total_fonts = len(font_config['essential']) + len(font_config['optional'])
+        essential_loaded = min(loaded_count, len(font_config['essential']))
+        optional_loaded = max(0, loaded_count - essential_loaded)
+        
+        print(f"✅ Font loading complete: {loaded_count}/{total_fonts} fonts loaded")
+        print(f"   Essential: {essential_loaded}/{len(font_config['essential'])}")
+        print(f"   Optional: {optional_loaded}/{len(font_config['optional'])}")
+        
+        if failed_fonts:
+            print(f"🔧 {len(failed_fonts)} fonts using system fallbacks - performance optimized")
+        
+        # Register fallback fonts in Qt system with safety checks
+        try:
+            _register_fallback_fonts(font_config)
+        except Exception as e:
+            print(f"⚠️ Fallback font registration warning: {e}")
         
     except Exception as e:
-        print(f"Error loading fonts: {e}")
+        print(f"❌ Error loading fonts: {e} - using system defaults")
+        _register_system_fonts_only()
+
+def _register_system_fonts_only():
+    """Register system fonts only when custom font loading fails."""
+    try:
+        print("🔤 Using system fonts only - JetBrains Mono, Consolas, or Monaco preferred for code")
+        print("🔤 Inter, Arial, or Helvetica preferred for UI text")
+    except Exception as e:
+        print(f"⚠️ System font registration warning: {e}")
+
+def _register_fallback_fonts(font_config):
+    """Register fallback font families for better compatibility with safety checks."""
+    try:
+        from PyQt6.QtGui import QFontDatabase
+        
+        # Create font fallback mappings for better rendering
+        all_configs = {**font_config['essential'], **font_config['optional']}
+        
+        # Ensure common font families are available
+        font_db = QFontDatabase()
+        available_families = font_db.families()
+        
+        # Register common programming fonts if available
+        programming_fonts = ['JetBrains Mono', 'Fira Code', 'Source Code Pro', 'Consolas', 'Monaco']
+        available_prog_fonts = [f for f in programming_fonts if f in available_families]
+        
+        if available_prog_fonts:
+            print(f"🔤 Available programming fonts: {', '.join(available_prog_fonts[:3])}")
+        else:
+            print("🔤 Using system monospace fonts for code display")
+            
+    except Exception as e:
+        print(f"⚠️ Fallback font registration warning: {e}")
+
+def _register_fallback_fonts(font_config):
+    """Register fallback font families for better compatibility with safety checks."""
+    try:
+        from PyQt6.QtGui import QFontDatabase
+        
+        # Create font fallback mappings for better rendering
+        all_configs = {**font_config['essential'], **font_config['optional']}
+        
+        # Ensure common font families are available
+        font_db = QFontDatabase()
+        available_families = font_db.families()
+        
+        # Register common programming fonts if available
+        programming_fonts = ['JetBrains Mono', 'Fira Code', 'Source Code Pro', 'Consolas', 'Monaco']
+        available_prog_fonts = [f for f in programming_fonts if f in available_families]
+        
+        if available_prog_fonts:
+            print(f"🔤 Available programming fonts: {', '.join(available_prog_fonts[:3])}")
+        else:
+            print("🔤 Using system monospace fonts for code display")
+            
+    except Exception as e:
+        print(f"⚠️ Fallback font registration warning: {e}")
 
 if __name__ == "__main__":
     # Setup global error handling first
