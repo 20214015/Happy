@@ -64,6 +64,11 @@ class InstancesModel(QAbstractTableModel):
         self._rows: List[Dict[str, Any]] = []  # each: {'index': int, 'info': dict, 'checked': bool}
         self._ui_states: Dict[int, Any] = {}   # transient status per index
         self._index_map: Dict[int, int] = {} # Map vm_index to row_index for fast lookup
+        
+        # 🚀 Performance optimization: Batch update system
+        self._pending_updates: Dict[int, Dict[str, Any]] = {}  # vm_index -> update_data
+        self._update_timer = None
+        self._batch_update_delay = 100  # ms - batch updates to reduce UI lag
 
     def rowCount(self, parent=QModelIndex()):
         return 0 if parent.isValid() else len(self._rows)
@@ -228,14 +233,30 @@ class InstancesModel(QAbstractTableModel):
     def _are_dicts_equal(self, d1: Dict, d2: Dict) -> bool:
         """So sánh hai dictionary, bỏ qua một số key không quan trọng."""
         # Các key có thể thay đổi thường xuyên nhưng không ảnh hưởng đến hiển thị
-        ignored_keys = {'pid', 'headless_pid', 'main_wnd', 'render_wnd'}
+        ignored_keys = {'pid', 'headless_pid', 'main_wnd', 'render_wnd', 'last_update', 'created_timestamp'}
+        
+        # Quick size check first
+        if len(d1) != len(d2):
+            return False
+        
+        # Get keys excluding ignored ones
         keys1 = set(d1.keys()) - ignored_keys
         keys2 = set(d2.keys()) - ignored_keys
+        
         if keys1 != keys2:
             return False
+        
+        # Compare important values only
         for key in keys1:
-            if d1[key] != d2[key]:
+            v1, v2 = d1[key], d2[key]
+            
+            # For numeric values, use small tolerance to avoid float precision issues
+            if isinstance(v1, (int, float)) and isinstance(v2, (int, float)):
+                if abs(v1 - v2) > 0.001:  # Small tolerance for float comparison
+                    return False
+            elif v1 != v2:
                 return False
+        
         return True
 
     def update_row_by_index(self, idx: int, info: Dict[str, Any]):
@@ -246,6 +267,67 @@ class InstancesModel(QAbstractTableModel):
             tl = self.index(row_idx, 0)
             br = self.index(row_idx, self.columnCount()-1)
             self.dataChanged.emit(tl, br, [])
+
+    def update_instance_fast(self, vm_index: int, update_data: Dict[str, Any]):
+        """
+        🚀 Fast instance update with batching to prevent lag
+        Updates are batched and applied together to minimize UI redraws
+        """
+        if not hasattr(self, '_update_timer') or self._update_timer is None:
+            from PyQt6.QtCore import QTimer
+            self._update_timer = QTimer()
+            self._update_timer.timeout.connect(self._apply_pending_updates)
+            self._update_timer.setSingleShot(True)
+        
+        # Add to pending updates
+        self._pending_updates[vm_index] = update_data
+        
+        # Schedule batch update
+        if not self._update_timer.isActive():
+            self._update_timer.start(self._batch_update_delay)
+    
+    def _apply_pending_updates(self):
+        """Apply all pending updates in a single batch"""
+        if not self._pending_updates:
+            return
+            
+        # Collect all changes
+        changed_rows = set()
+        
+        for vm_index, update_data in self._pending_updates.items():
+            if vm_index in self._index_map:
+                row_idx = self._index_map[vm_index]
+                row = self._rows[row_idx]
+                
+                # Update info data
+                if 'info' in update_data:
+                    row['info'].update(update_data['info'])
+                    changed_rows.add(row_idx)
+                
+                # Update UI state
+                if 'ui_state' in update_data:
+                    self._ui_states[vm_index] = update_data['ui_state']
+                    changed_rows.add(row_idx)
+        
+        # Emit dataChanged for all affected rows in batches
+        if changed_rows:
+            for row_idx in changed_rows:
+                first_col = self.index(row_idx, 0)
+                last_col = self.index(row_idx, self.columnCount() - 1)
+                self.dataChanged.emit(first_col, last_col)
+        
+        # Clear pending updates
+        self._pending_updates.clear()
+    
+    def set_ui_state(self, vm_index: int, state_data: Any):
+        """Set UI state for a specific instance (optimized)"""
+        self._ui_states[vm_index] = state_data
+        
+        # Only emit change signal if row is visible
+        if vm_index in self._index_map:
+            row_idx = self._index_map[vm_index]
+            status_index = self.index(row_idx, TableColumn.STATUS)
+            self.dataChanged.emit(status_index, status_index)
 
     def set_all_checked(self, checked: bool):
         """Tối ưu hóa: Chỉ phát tín hiệu dataChanged cho cột checkbox."""

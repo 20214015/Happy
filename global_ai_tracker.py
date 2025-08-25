@@ -34,6 +34,13 @@ class GlobalAITracker(QObject):
         DEBUG_MODE = False  # ✅ Silent mode for performance
         self.scan_interval = 10000  # Tăng lên 10 giây để giảm lag
         
+        # 🚀 Performance optimization: Update batching and throttling
+        self._table_update_batch = {}  # table_widget -> {instance_id -> (status, data)}
+        self._update_throttle_timer = QTimer()
+        self._update_throttle_timer.timeout.connect(self._flush_table_updates)
+        self._update_throttle_timer.setSingleShot(True)
+        self._throttle_delay = 50  # ms - batch table updates
+        
         # Setup timer với interval lớn hơn
         self.tracker_timer = QTimer()
         self.tracker_timer.timeout.connect(self.scan_instances)
@@ -284,65 +291,158 @@ class GlobalAITracker(QObject):
         print(f"🤖 AI Tracker scan interval set to {interval_ms/1000} seconds")
     
     def update_instance_in_table(self, table_widget, instance_id: int, status: str, data: Dict):
-        """Update instance status in table widget (Performance optimized)"""
+        """Update instance status in table widget (Model/View optimized with batching)"""
+        if not table_widget:
+            return
+        
+        # 🚀 NEW: Batch updates to reduce UI lag
+        if table_widget not in self._table_update_batch:
+            self._table_update_batch[table_widget] = {}
+        
+        self._table_update_batch[table_widget][instance_id] = (status, data)
+        
+        # Start throttle timer if not active
+        if not self._update_throttle_timer.isActive():
+            self._update_throttle_timer.start(self._throttle_delay)
+    
+    def _flush_table_updates(self):
+        """Apply all batched table updates at once"""
+        for table_widget, updates in self._table_update_batch.items():
+            if not updates:
+                continue
+                
+            try:
+                self._apply_batched_updates(table_widget, updates)
+            except Exception as e:
+                if hasattr(self, 'debug_mode') and self.debug_mode:
+                    print(f"❌ Batch Update Error: {e}")
+        
+        # Clear all batches
+        self._table_update_batch.clear()
+    
+    def _apply_batched_updates(self, table_widget, updates: Dict[int, tuple]):
+        """Apply multiple updates to a table widget efficiently"""
         try:
-            if not table_widget:
-                return
+            # 🚀 NEW: Check if table uses Model/View pattern (QTableView)
+            if hasattr(table_widget, 'model') and table_widget.model():
+                model = table_widget.model()
+                
+                # Handle proxy model
+                source_model = model
+                if hasattr(model, 'sourceModel') and model.sourceModel():
+                    source_model = model.sourceModel()
+                
+                # Use fast batch update if available
+                if hasattr(source_model, 'update_instance_fast'):
+                    for instance_id, (status, data) in updates.items():
+                        update_data = {
+                            'ui_state': status,
+                            'info': {}
+                        }
+                        
+                        # Add performance data if available
+                        if 'cpu' in data:
+                            update_data['info']['cpu_usage'] = data['cpu']
+                        if 'memory' in data:
+                            update_data['info']['memory_usage'] = data['memory']
+                        
+                        source_model.update_instance_fast(instance_id, update_data)
+                    return
+                
+                # Fallback: Use set_ui_state for status updates
+                elif hasattr(source_model, 'set_ui_state'):
+                    for instance_id, (status, data) in updates.items():
+                        source_model.set_ui_state(instance_id, status)
+                    return
             
-            # Disable table updates để batch processing
-            table_widget.setUpdatesEnabled(False)
-            
-            # Find the row for this instance
-            for row in range(table_widget.rowCount()):
-                item = table_widget.item(row, 0)  # Column 0: ID (#)
-                if item and item.text() == str(instance_id):
-                    
-                    # Update STATUS column (Column 2) với optimized colors
-                    status_item = QTableWidgetItem(status)
-                    
-                    # Optimized color setting
-                    if '🟢' in status:
-                        status_item.setBackground(QColor(45, 74, 34))  # Dark green
-                        status_item.setForeground(QColor(166, 226, 46))  # Bright green
-                    elif '🔴' in status:
-                        status_item.setBackground(QColor(58, 42, 42))  # Dark red  
-                        status_item.setForeground(QColor(249, 38, 114))  # Bright red
-                    elif '🟡' in status:
-                        status_item.setBackground(QColor(58, 58, 42))  # Dark yellow
-                        status_item.setForeground(QColor(230, 219, 116))  # Bright yellow
-                    
-                    table_widget.setItem(row, 2, status_item)  # Column 2: Status
-                    
-                    # Only update CPU/Memory if significantly different để avoid unnecessary updates
-                    if 'cpu' in data and table_widget.columnCount() > 4:
-                        current_cpu = table_widget.item(row, 4)
-                        new_cpu_value = f"{data['cpu']:.1f}%"
-                        if not current_cpu or current_cpu.text() != new_cpu_value:
-                            cpu_item = QTableWidgetItem(new_cpu_value)
-                            cpu_item.setForeground(QColor(255, 255, 255))
-                            table_widget.setItem(row, 4, cpu_item)  # Column 4: CPU %
-                    
-                    # Memory update với same optimization
-                    if 'memory' in data and table_widget.columnCount() > 5:
-                        current_mem = table_widget.item(row, 5)
-                        new_mem_value = f"{data['memory']:.1f}%"
-                        if not current_mem or current_mem.text() != new_mem_value:
-                            mem_item = QTableWidgetItem(new_mem_value)
-                            mem_item.setForeground(QColor(255, 255, 255))
-                            table_widget.setItem(row, 5, mem_item)  # Column 5: Memory
-                    
-                    break
-            
-            # Re-enable updates và force refresh
-            table_widget.setUpdatesEnabled(True)
+            # 🔄 FALLBACK: Legacy QTableWidget support (batch optimized)
+            self._legacy_batch_update(table_widget, updates)
             
         except Exception as e:
             # Silent error handling to avoid spam
             if hasattr(self, 'debug_mode') and self.debug_mode:
-                print(f"❌ AI Table Update Error: {e}")
+                print(f"❌ Apply Batch Update Error: {e}")
+    
+    def _legacy_batch_update(self, table_widget, updates: Dict[int, tuple]):
+        """Legacy batch table update for QTableWidget (optimized)"""
+        try:
+            # Single disable/enable cycle for all updates
+            table_widget.setUpdatesEnabled(False)
+            
+            # Build row cache once
+            if not hasattr(self, '_row_cache'):
+                self._row_cache = {}
+            
+            # Rebuild cache if needed
+            if len(self._row_cache) != table_widget.rowCount():
+                self._row_cache.clear()
+                for row in range(table_widget.rowCount()):
+                    item = table_widget.item(row, 0)  # Column 0: ID (#)
+                    if item:
+                        try:
+                            row_id = int(item.text())
+                            self._row_cache[row_id] = row
+                        except ValueError:
+                            continue
+            
+            # Apply all updates
+            for instance_id, (status, data) in updates.items():
+                target_row = self._row_cache.get(instance_id)
+                if target_row is not None:
+                    self._update_single_row(table_widget, target_row, status, data)
+            
+            # Single re-enable for all updates
+            table_widget.setUpdatesEnabled(True)
+            
+        except Exception as e:
+            if hasattr(self, 'debug_mode') and self.debug_mode:
+                print(f"❌ Legacy Batch Update Error: {e}")
             # Ensure updates are re-enabled
             if table_widget:
                 table_widget.setUpdatesEnabled(True)
+    
+    def _update_single_row(self, table_widget, row: int, status: str, data: Dict):
+        """Update a single row in legacy table widget"""
+        try:
+            # Only update if status changed (avoid unnecessary redraws)
+            current_status_item = table_widget.item(row, 2)
+            if not current_status_item or current_status_item.text() != status:
+                # Update STATUS column (Column 2) với optimized colors
+                status_item = QTableWidgetItem(status)
+                
+                # Optimized color setting
+                if '🟢' in status:
+                    status_item.setBackground(QColor(45, 74, 34))  # Dark green
+                    status_item.setForeground(QColor(166, 226, 46))  # Bright green
+                elif '🔴' in status:
+                    status_item.setBackground(QColor(58, 42, 42))  # Dark red  
+                    status_item.setForeground(QColor(249, 38, 114))  # Bright red
+                elif '🟡' in status:
+                    status_item.setBackground(QColor(58, 58, 42))  # Dark yellow
+                    status_item.setForeground(QColor(230, 219, 116))  # Bright yellow
+                
+                table_widget.setItem(row, 2, status_item)  # Column 2: Status
+            
+            # Only update CPU/Memory if significantly different để avoid unnecessary updates
+            if 'cpu' in data and table_widget.columnCount() > 4:
+                current_cpu = table_widget.item(row, 4)
+                new_cpu_value = f"{data['cpu']:.1f}%"
+                if not current_cpu or current_cpu.text() != new_cpu_value:
+                    cpu_item = QTableWidgetItem(new_cpu_value)
+                    cpu_item.setForeground(QColor(255, 255, 255))
+                    table_widget.setItem(row, 4, cpu_item)  # Column 4: CPU %
+            
+            # Memory update với same optimization
+            if 'memory' in data and table_widget.columnCount() > 5:
+                current_mem = table_widget.item(row, 5)
+                new_mem_value = f"{data['memory']:.1f}%"
+                if not current_mem or current_mem.text() != new_mem_value:
+                    mem_item = QTableWidgetItem(new_mem_value)
+                    mem_item.setForeground(QColor(255, 255, 255))
+                    table_widget.setItem(row, 5, mem_item)  # Column 5: Memory
+        except Exception as e:
+            if hasattr(self, 'debug_mode') and self.debug_mode:
+                print(f"❌ Single Row Update Error: {e}")
 
 
 # Global instance
