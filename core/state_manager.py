@@ -19,6 +19,17 @@ except ImportError:
             pass
 
 
+class StateManagerQt(QObject):
+    """Qt-enabled StateManager with proper signal support"""
+    instances_changed = pyqtSignal(list)
+    selection_changed = pyqtSignal(list)
+    ui_changed = pyqtSignal(dict)
+    automation_changed = pyqtSignal(dict)
+    
+    def __init__(self):
+        super().__init__()
+
+
 class StateManager:
     """
     Centralized state management for the application.
@@ -50,18 +61,22 @@ class StateManager:
         
         # Setup Qt signals if available
         if _QT_AVAILABLE:
-            self._qt_object = QObject()
-            # Create signals on the QObject and reference them
-            self._qt_object.instances_changed = pyqtSignal(list)
-            self._qt_object.selection_changed = pyqtSignal(list)
-            self._qt_object.ui_changed = pyqtSignal(dict)
-            self._qt_object.automation_changed = pyqtSignal(dict)
-            
-            # Create instance references for easy access
+            # Create Qt object for signal support
+            self._qt_object = StateManagerQt()
+            # Expose signals through the Qt object
             self.instances_changed = self._qt_object.instances_changed
             self.selection_changed = self._qt_object.selection_changed
             self.ui_changed = self._qt_object.ui_changed
             self.automation_changed = self._qt_object.automation_changed
+        else:
+            # Create dummy signals for non-Qt environments
+            class DummySignal:
+                def emit(self, *args): pass
+                def connect(self, *args): pass
+            self.instances_changed = DummySignal()
+            self.selection_changed = DummySignal()
+            self.ui_changed = DummySignal()
+            self.automation_changed = DummySignal()
         
     # Instance State Management
     def update_instances(self, instances: List[Dict[str, Any]]):
@@ -75,13 +90,7 @@ class StateManager:
         self.logger.debug(f"Updated instances: {len(instances)} instances")
         
         # Emit Qt signal if available
-        if _QT_AVAILABLE and hasattr(self, '_qt_object') and hasattr(self._qt_object, 'instances_changed'):
-            try:
-                # Note: This would work if we were in a proper Qt environment
-                # For now, we'll skip the actual Qt signal emission
-                pass
-            except Exception:
-                pass
+        self.instances_changed.emit(instances)
             
         # Emit event
         from .event_manager import emit_event
@@ -178,13 +187,7 @@ class StateManager:
         self.logger.debug(f"Updated UI settings: {settings}")
         
         # Emit Qt signal if available
-        if _QT_AVAILABLE and hasattr(self, '_qt_object') and hasattr(self._qt_object, 'ui_changed'):
-            try:
-                # Note: This would work if we were in a proper Qt environment
-                # For now, we'll skip the actual Qt signal emission
-                pass
-            except Exception:
-                pass
+        self.ui_changed.emit(settings)
             
         # Emit event
         from .event_manager import emit_event

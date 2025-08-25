@@ -88,7 +88,13 @@ class MumuManager:
     def __init__(self, executable_path: str):
         self.executable_path = executable_path
         if not os.path.exists(self.executable_path):
-            print(f"Cảnh báo: Không tìm thấy MuMuManager.exe tại {self.executable_path}")
+            # Only show warning for Windows platform where MuMu is expected
+            import sys
+            if sys.platform == "win32":
+                print(f"Cảnh báo: Không tìm thấy MuMuManager.exe tại {self.executable_path}")
+            # On Linux/other platforms, this is expected behavior
+            elif self.executable_path and not self.executable_path.isspace():
+                print(f"Info: MuMuManager path not available on {sys.platform} platform")
 
     def is_valid(self) -> bool:
         """Kiểm tra xem đường dẫn thực thi đã cấu hình có hợp lệ không."""

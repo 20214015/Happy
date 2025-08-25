@@ -194,10 +194,14 @@ class ControlPanelComponent(QObject):
                 min-width: 120px;
             }
             QPushButton:hover {
-                transform: translateY(-2px);
+                margin-top: -2px;
+                padding: 8px 18px;
+                border: 2px solid #66d9ef;
             }
             QPushButton:pressed {
-                transform: translateY(0px);
+                margin-top: 0px;
+                padding: 8px 16px;
+                border: 2px solid #f92672;
             }
         """
         
