@@ -266,35 +266,62 @@ class AppTheme:
             }}
         """
 
+    # Theme cache để tránh recompute stylesheet 
+    _theme_cache = {}
+    
     @staticmethod
     def apply_theme(app: QApplication, settings):
-        """Applies the theme and accent color saved in settings with enhanced Monokai support."""
+        """Applies the theme and accent color với caching và error handling"""
         theme_name = settings.value("theme/name", "monokai")  # Default to monokai
         accent_color = settings.value("theme/accent_color", "#F92672")  # Monokai pink
         
-        app.setStyle("Fusion")
+        # Generate cache key
+        cache_key = f"{theme_name}_{accent_color}"
         
-        # Use comprehensive Monokai theme if available and selected
-        if theme_name == "monokai" and MONOKAI_AVAILABLE:
-            try:
-                apply_monokai_theme(app)
-                print("✅ Comprehensive Monokai theme applied")
-                return
-            except Exception as e:
-                print(f"⚠️ Failed to apply comprehensive Monokai theme: {e}")
-                # Fall back to basic monokai
-        
-        # Fallback to basic theme system
-        if theme_name == "light":
-            palette = AppTheme.get_light_palette()
-        elif theme_name == "monokai":
-            palette = AppTheme.get_monokai_palette()
-        else:
-            palette = AppTheme.get_dark_palette()
-        
-        palette.setColor(QPalette.ColorRole.Highlight, QColor(accent_color))
-        palette.setColor(QPalette.ColorRole.HighlightedText, QColor("#ffffff"))
-        app.setPalette(palette)
+        try:
+            app.setStyle("Fusion")
             
-        final_stylesheet = AppTheme.get_stylesheet_template(theme_name, accent_color)
-        app.setStyleSheet(final_stylesheet)
+            # Use comprehensive Monokai theme if available and selected
+            if theme_name == "monokai" and MONOKAI_AVAILABLE:
+                try:
+                    apply_monokai_theme(app)
+                    print("✅ Comprehensive Monokai theme applied")
+                    return
+                except Exception as e:
+                    print(f"⚠️ Failed to apply comprehensive Monokai theme: {e}")
+                    # Fall back to basic monokai
+            
+            # Check cache first for other themes
+            if cache_key in AppTheme._theme_cache:
+                cached_palette, cached_stylesheet = AppTheme._theme_cache[cache_key]
+                app.setPalette(cached_palette)
+                app.setStyleSheet(cached_stylesheet)
+                return
+            
+            # Fallback to basic theme system
+            if theme_name == "light":
+                palette = AppTheme.get_light_palette()
+            elif theme_name == "monokai":
+                palette = AppTheme.get_monokai_palette()
+            else:
+                palette = AppTheme.get_dark_palette()
+            
+            palette.setColor(QPalette.ColorRole.Highlight, QColor(accent_color))
+            palette.setColor(QPalette.ColorRole.HighlightedText, QColor("#ffffff"))
+            
+            final_stylesheet = AppTheme.get_stylesheet_template(theme_name, accent_color)
+            
+            # Cache the theme
+            AppTheme._theme_cache[cache_key] = (palette, final_stylesheet)
+            
+            app.setPalette(palette)
+            app.setStyleSheet(final_stylesheet)
+            
+        except Exception as e:
+            print(f"⚠️ Theme application failed: {e}, using fallback")
+            # Apply safe fallback theme
+            try:
+                app.setPalette(AppTheme.get_dark_palette())
+                app.setStyleSheet("")  # Clear any problematic stylesheet
+            except Exception:
+                pass  # Silent fail for ultimate fallback

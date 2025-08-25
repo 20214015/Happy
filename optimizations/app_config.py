@@ -122,53 +122,103 @@ class AppConfig:
         }
     
     def get(self, key: str, default=None):
-        """Get configuration value using dot notation (e.g., 'performance.enable_caching')"""
-        keys = key.split('.')
-        value = self._config
-        
-        for k in keys:
-            if isinstance(value, dict) and k in value:
-                value = value[k]
-            else:
-                return default
-                
-        return value
+        """Get configuration value using dot notation với validation"""
+        try:
+            keys = key.split('.')
+            value = self._config
+            
+            for k in keys:
+                if isinstance(value, dict) and k in value:
+                    value = value[k]
+                else:
+                    return default
+                    
+            return value
+        except Exception:
+            return default
     
     def set(self, key: str, value: Any):
-        """Set configuration value using dot notation"""
-        keys = key.split('.')
-        config = self._config
-        
-        for k in keys[:-1]:
-            if k not in config:
-                config[k] = {}
-            config = config[k]
+        """Set configuration value using dot notation với validation"""
+        try:
+            keys = key.split('.')
+            if not keys or not all(k.strip() for k in keys):
+                return False
+                
+            config = self._config
             
-        config[keys[-1]] = value
+            for k in keys[:-1]:
+                if k not in config:
+                    config[k] = {}
+                elif not isinstance(config[k], dict):
+                    config[k] = {}  # Convert to dict if needed
+                config = config[k]
+                
+            config[keys[-1]] = value
+            return True
+        except Exception:
+            return False
+    
+    def validate_config(self) -> bool:
+        """Validate configuration values"""
+        try:
+            # Validate performance settings
+            worker_pool_size = self.get("performance.worker_pool_size", 4)
+            if not isinstance(worker_pool_size, int) or worker_pool_size < 1 or worker_pool_size > 16:
+                self.set("performance.worker_pool_size", 4)
+                
+            cache_ttl = self.get("performance.cache_ttl", 30)
+            if not isinstance(cache_ttl, (int, float)) or cache_ttl < 1:
+                self.set("performance.cache_ttl", 30)
+                
+            # Validate UI settings
+            refresh_interval = self.get("ui.auto_refresh_interval", 30)
+            if not isinstance(refresh_interval, int) or refresh_interval < 5:
+                self.set("ui.auto_refresh_interval", 30)
+                
+            return True
+        except Exception:
+            return False
     
     def update_from_qsettings(self, qsettings):
-        """Update configuration from QSettings"""
+        """Update configuration from QSettings với error handling"""
         try:
-            # Performance settings
-            self.set("performance.enable_caching", 
-                    qsettings.value("performance/enable_caching", True, type=bool))
-            self.set("ui.auto_refresh_enabled",
-                    qsettings.value("auto_refresh/enabled", True, type=bool))
-            self.set("ui.auto_refresh_interval", 
-                    qsettings.value("auto_refresh/interval", 30, type=int))
+            # Performance settings với validation
+            enable_caching = qsettings.value("performance/enable_caching", True, type=bool)
+            self.set("performance.enable_caching", enable_caching)
             
-            # UI settings  
-            self.set("ui.theme",
-                    qsettings.value("ui/theme", AppConstants.Theme.DEFAULT_THEME))
-                    
-            # Logging settings
-            self.set("logging.level",
-                    qsettings.value("logging/level", AppConstants.Logging.DEFAULT_LOG_LEVEL))
-            self.set("logging.max_entries",
-                    qsettings.value("logging/max_entries", AppConstants.Logging.MAX_LOG_ENTRIES, type=int))
-                    
+            auto_refresh_enabled = qsettings.value("auto_refresh/enabled", True, type=bool)
+            self.set("ui.auto_refresh_enabled", auto_refresh_enabled)
+            
+            auto_refresh_interval = qsettings.value("auto_refresh/interval", 30, type=int)
+            # Validate interval range
+            if auto_refresh_interval < 5:
+                auto_refresh_interval = 30
+            elif auto_refresh_interval > 300:
+                auto_refresh_interval = 300
+            self.set("ui.auto_refresh_interval", auto_refresh_interval)
+            
+            # UI settings với validation
+            theme = qsettings.value("theme/name", AppConstants.Theme.DEFAULT_THEME, type=str)
+            if theme not in AppConstants.Theme.AVAILABLE_THEMES:
+                theme = AppConstants.Theme.DEFAULT_THEME
+            self.set("ui.theme", theme)
+            
+            # Worker pool size với validation
+            worker_pool_size = qsettings.value("performance/worker_pool_size", 4, type=int)
+            if worker_pool_size < 1:
+                worker_pool_size = 1
+            elif worker_pool_size > 16:
+                worker_pool_size = 16
+            self.set("performance.worker_pool_size", worker_pool_size)
+            
+            # Validate configuration after loading
+            self.validate_config()
+            
         except Exception as e:
             print(f"Warning: Failed to load some settings: {e}")
+            # Ensure we have valid defaults
+            self._load_defaults()
+            self.validate_config()
     
     def save_to_qsettings(self, qsettings):
         """Save configuration to QSettings"""
@@ -176,11 +226,15 @@ class AppConfig:
             qsettings.setValue("performance/enable_caching", self.get("performance.enable_caching"))
             qsettings.setValue("auto_refresh/enabled", self.get("ui.auto_refresh_enabled"))
             qsettings.setValue("auto_refresh/interval", self.get("ui.auto_refresh_interval"))
-            qsettings.setValue("ui/theme", self.get("ui.theme"))
-            qsettings.setValue("logging/level", self.get("logging.level"))
-            qsettings.setValue("logging/max_entries", self.get("logging.max_entries"))
+            qsettings.setValue("theme/name", self.get("ui.theme"))
+            qsettings.setValue("performance/worker_pool_size", self.get("performance.worker_pool_size"))
         except Exception as e:
             print(f"Warning: Failed to save some settings: {e}")
+    
+    def clear_config(self):
+        """Clear configuration cache"""
+        self._config.clear()
+        self._load_defaults()
 
 # Global config instance
 app_config = AppConfig()

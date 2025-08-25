@@ -98,8 +98,9 @@ from log_settings_dialog import LogSettingsDialog
 # =====================================================================
 from ui import (
     ModernButton, ModernCard, ModernProgressBar, ModernTable, 
-    DesignTokens, SmartCache
+    DesignTokens
 )
+from ui.performance import SmartCache as UISmartCache, AsyncTaskManager
 
 # =====================================================================
 # ADVANCED OPTIMIZATIONS - PERFORMANCE SYSTEMS
@@ -184,7 +185,7 @@ class MainWindow(QMainWindow, MainWindowOptimizationMixin):
         self.mumu_manager = MumuManager(self.settings.value("manager_path", ""))
         
         # 🚀 SMART CACHE - Performance optimization với intelligent caching và persistence
-        self.smart_cache = SmartCache(persistent=True)  # Enable persistence
+        self.smart_cache = global_smart_cache  # Use global instance for consistency
         # Cache logging sẽ được handle bởi log widget sau khi init
         self.smart_cache.cache_hit.connect(self._on_cache_hit)
         self.smart_cache.cache_miss.connect(self._on_cache_miss)
@@ -672,7 +673,7 @@ class MainWindow(QMainWindow, MainWindowOptimizationMixin):
             event.accept()
 
     def _cleanup_resources(self):
-        """Dọn dẹp tài nguyên khi đóng ứng dụng"""
+        """Enhanced cleanup để giải phóng memory và resources"""
         # Dừng auto refresh timer
         if hasattr(self, 'auto_refresh_timer'):
             self.auto_refresh_timer.stop()
@@ -684,14 +685,63 @@ class MainWindow(QMainWindow, MainWindowOptimizationMixin):
         self.found_config_files.clear()
         self.failed_indices.clear()
         
-        # Cleanup workers
+        # Cleanup smart cache với proper signal disconnection
+        if hasattr(self, 'smart_cache'):
+            try:
+                self.smart_cache.cache_hit.disconnect()
+                self.smart_cache.cache_miss.disconnect()
+                if hasattr(self.smart_cache, 'cache_evicted'):
+                    self.smart_cache.cache_evicted.disconnect()
+                if hasattr(self.smart_cache, 'cache_cleared'):
+                    self.smart_cache.cache_cleared.disconnect()
+            except Exception:
+                pass  # Ignore disconnection errors
+        
+        # Cleanup workers với proper signal disconnection
         if self.worker:
+            try:
+                self.worker.task_result.disconnect()
+                self.worker.finished.disconnect()
+                if self.worker.isRunning():
+                    self.worker.terminate()
+                    self.worker.wait()
+            except Exception:
+                pass
             self.worker.deleteLater()
+            self.worker = None
+            
         if self.refresh_worker:
+            try:
+                self.refresh_worker.task_result.disconnect()
+                self.refresh_worker.finished.disconnect()
+                if self.refresh_worker.isRunning():
+                    self.refresh_worker.terminate()
+                    self.refresh_worker.wait()
+            except Exception:
+                pass
             self.refresh_worker.deleteLater()
+            self.refresh_worker = None
+            
         for worker in self.update_workers:
+            try:
+                if hasattr(worker, 'task_result'):
+                    worker.task_result.disconnect()
+                if hasattr(worker, 'finished'):
+                    worker.finished.disconnect()
+                if worker.isRunning():
+                    worker.terminate()
+                    worker.wait()
+            except Exception:
+                pass
             worker.deleteLater()
         self.update_workers.clear()
+        
+        # Cleanup automation manager if exists
+        if hasattr(self, 'automation_manager'):
+            try:
+                self.automation_manager.cleanup()
+            except Exception:
+                pass
 
     def _init_ui(self):
         self.central_widget = QWidget()
@@ -2069,6 +2119,16 @@ class MainWindow(QMainWindow, MainWindowOptimizationMixin):
             return result
 
         # Initialize worker without complex cache integration
+        # Clean up previous worker if exists
+        if self.refresh_worker is not None:
+            if self.refresh_worker.isRunning():
+                self.refresh_worker.terminate()
+                self.refresh_worker.wait()
+            self.refresh_worker.task_result.disconnect()
+            self.refresh_worker.finished.disconnect()
+            self.refresh_worker.deleteLater()
+            self.refresh_worker = None
+            
         self.refresh_worker = GenericWorker(refresh_task, self.mumu_manager, {})
         self.refresh_worker.task_result.connect(self._on_instances_loaded)
         self.refresh_worker.finished.connect(self._on_refresh_finished)
@@ -2167,7 +2227,13 @@ class MainWindow(QMainWindow, MainWindowOptimizationMixin):
         
         Cleans up worker reference and updates UI states.
         """
-        self.refresh_worker = None
+        # Proper worker cleanup
+        if self.refresh_worker is not None:
+            self.refresh_worker.task_result.disconnect()
+            self.refresh_worker.finished.disconnect()
+            self.refresh_worker.deleteLater()
+            self.refresh_worker = None
+            
         self.update_ui_states()
 
     # =====================================================================

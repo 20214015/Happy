@@ -9,6 +9,7 @@ import hashlib
 from typing import Any, Optional, Dict, Tuple
 from dataclasses import dataclass
 from enum import Enum
+from PyQt6.QtCore import QObject, pyqtSignal
 
 class CacheStrategy(Enum):
     """Chiến lược cache khác nhau"""
@@ -35,15 +36,23 @@ class CacheEntry:
     def age(self) -> float:
         return time.time() - self.timestamp
 
-class SmartCache:
-    """Smart caching system cho ADB commands"""
+class SmartCache(QObject):
+    """Smart caching system cho ADB commands với signals và error handling"""
     
-    def __init__(self, max_size_mb: int = 50, strategy: CacheStrategy = CacheStrategy.SMART):
+    # Signals for monitoring
+    cache_hit = pyqtSignal(str)
+    cache_miss = pyqtSignal(str)
+    cache_evicted = pyqtSignal(str)
+    cache_cleared = pyqtSignal()
+    
+    def __init__(self, max_size_mb: int = 50, strategy: CacheStrategy = CacheStrategy.SMART, persistent: bool = False):
+        super().__init__()
         self.max_size_bytes = max_size_mb * 1024 * 1024
         self.strategy = strategy
         self.cache: Dict[str, CacheEntry] = {}
         self.hit_count = 0
         self.miss_count = 0
+        self.persistent = persistent
         
         # TTL defaults for different command types
         self.ttl_map = {
@@ -64,17 +73,17 @@ class SmartCache:
         """Estimate memory size of data"""
         try:
             return len(json.dumps(data, default=str).encode())
-        except:
+        except (TypeError, ValueError, OverflowError):
             return len(str(data).encode())
     
     def _evict_if_needed(self, required_size: int):
-        """LRU eviction khi cache đầy"""
+        """LRU eviction khi cache đầy với signal emission"""
         current_size = sum(entry.size_bytes for entry in self.cache.values())
         
         if current_size + required_size <= self.max_size_bytes:
             return
             
-        # Sort by access frequency and age
+        # Sort by access frequency and age (LRU + LFU hybrid)
         entries_by_priority = sorted(
             self.cache.items(),
             key=lambda x: (x[1].access_count, -x[1].age)
@@ -83,15 +92,17 @@ class SmartCache:
         for key, entry in entries_by_priority:
             del self.cache[key]
             current_size -= entry.size_bytes
+            self.cache_evicted.emit(key)
             if current_size + required_size <= self.max_size_bytes:
                 break
     
     def get(self, command: str, params: Dict = None, command_type: str = 'default') -> Optional[Any]:
-        """Get from cache"""
+        """Get from cache với enhanced monitoring"""
         cache_key = self._generate_key(command, params)
         
         if cache_key not in self.cache:
             self.miss_count += 1
+            self.cache_miss.emit(cache_key)
             return None
             
         entry = self.cache[cache_key]
@@ -100,11 +111,13 @@ class SmartCache:
         if entry.is_expired:
             del self.cache[cache_key]
             self.miss_count += 1
+            self.cache_miss.emit(cache_key)
             return None
             
         # Update access stats
         entry.access_count += 1
         self.hit_count += 1
+        self.cache_hit.emit(cache_key)
         
         return entry.data
     
@@ -138,28 +151,58 @@ class SmartCache:
         self.cache[cache_key] = entry
     
     def invalidate_pattern(self, pattern: str):
-        """Invalidate cache entries matching pattern"""
+        """Invalidate cache entries matching pattern với improved performance"""
         to_remove = [
             key for key in self.cache.keys() 
             if pattern in key
         ]
         for key in to_remove:
             del self.cache[key]
+            self.cache_evicted.emit(key)
+    
+    def clear(self):
+        """Clear all cache entries"""
+        self.cache.clear()
+        self.hit_count = 0
+        self.miss_count = 0
+        self.cache_cleared.emit()
+    
+    def cleanup_expired(self):
+        """Remove expired entries to free memory"""
+        expired_keys = [
+            key for key, entry in self.cache.items()
+            if entry.is_expired
+        ]
+        for key in expired_keys:
+            del self.cache[key]
+            self.cache_evicted.emit(key)
+        return len(expired_keys)
     
     def get_stats(self) -> Dict:
-        """Get cache statistics"""
+        """Get comprehensive cache statistics"""
         total_requests = self.hit_count + self.miss_count
         hit_rate = (self.hit_count / total_requests * 100) if total_requests > 0 else 0
         
         total_size = sum(entry.size_bytes for entry in self.cache.values())
+        avg_entry_size = total_size / len(self.cache) if self.cache else 0
+        
+        # Calculate TTL distribution
+        ttl_distribution = {}
+        for entry in self.cache.values():
+            ttl_bucket = f"{entry.ttl:.0f}s"
+            ttl_distribution[ttl_bucket] = ttl_distribution.get(ttl_bucket, 0) + 1
         
         return {
             'hit_rate': f"{hit_rate:.1f}%",
             'total_entries': len(self.cache),
             'total_size_mb': f"{total_size / 1024 / 1024:.2f}",
+            'avg_entry_size_kb': f"{avg_entry_size / 1024:.2f}",
             'hit_count': self.hit_count,
             'miss_count': self.miss_count,
+            'memory_usage_percent': f"{(total_size / self.max_size_bytes * 100):.1f}%",
+            'ttl_distribution': ttl_distribution,
+            'strategy': self.strategy.value
         }
 
-# Global cache instance
-global_smart_cache = SmartCache()
+# Global cache instance with persistence for better startup performance
+global_smart_cache = SmartCache(max_size_mb=100, strategy=CacheStrategy.SMART, persistent=True)

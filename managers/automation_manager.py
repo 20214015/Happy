@@ -266,6 +266,18 @@ print("Performance monitoring completed")
                         "script_name": script_name
                     }
                     
+            # Clean up previous worker if exists
+            if self.script_worker is not None:
+                self.script_worker.finished.disconnect()
+                if hasattr(self.script_worker, 'error'):
+                    self.script_worker.error.disconnect()
+                self.script_worker.progress.disconnect()
+                if self.script_worker.isRunning():
+                    self.script_worker.terminate()
+                    self.script_worker.wait()
+                self.script_worker.deleteLater()
+                self.script_worker = None
+            
             # Create and start worker
             self.script_worker = GenericWorker(script_task, self.mumu_manager, {
                 'script': script,
@@ -273,7 +285,8 @@ print("Performance monitoring completed")
             })
             
             self.script_worker.finished.connect(self._on_script_executed)
-            self.script_worker.error.connect(self._on_script_error)
+            if hasattr(self.script_worker, 'error'):
+                self.script_worker.error.connect(self._on_script_error)
             self.script_worker.progress.connect(
                 lambda progress: self.progress_updated.emit(progress, f"Executing {script_name}")
             )
@@ -309,10 +322,48 @@ print("Performance monitoring completed")
             'message': message
         })
         
+        # Clean up worker after completion
+        if self.script_worker is not None:
+            self.script_worker.finished.disconnect()
+            if hasattr(self.script_worker, 'error'):
+                self.script_worker.error.disconnect()
+            self.script_worker.progress.disconnect()
+            self.script_worker.deleteLater()
+            self.script_worker = None
+        
     def _on_script_error(self, error: str):
         """Handle script execution error"""
         self.logger.error(f"Script execution error: {error}")
         self.script_executed.emit("Unknown", False, f"Script error: {error}")
+        
+        # Clean up worker after error
+        if self.script_worker is not None:
+            self.script_worker.finished.disconnect()
+            if hasattr(self.script_worker, 'error'):
+                self.script_worker.error.disconnect()
+            self.script_worker.progress.disconnect()
+            self.script_worker.deleteLater()
+            self.script_worker = None
+    
+    def cleanup(self):
+        """Clean up resources when manager is destroyed"""
+        if self.script_worker is not None:
+            self.script_worker.finished.disconnect()
+            if hasattr(self.script_worker, 'error'):
+                self.script_worker.error.disconnect()
+            self.script_worker.progress.disconnect()
+            if self.script_worker.isRunning():
+                self.script_worker.terminate()
+                self.script_worker.wait()
+            self.script_worker.deleteLater()
+            self.script_worker = None
+            
+        if self.automation_worker is not None:
+            if self.automation_worker.isRunning():
+                self.automation_worker.terminate()
+                self.automation_worker.wait()
+            self.automation_worker.deleteLater()
+            self.automation_worker = None
         
     # Script File Operations
     def save_script(self, file_path: str = None) -> bool:

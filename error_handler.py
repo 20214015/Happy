@@ -228,16 +228,45 @@ class SafeExecutor:
             return None
     
     def safe_json_operation(self, json_str: str, component: str = "JSON"):
-        """Safe JSON parsing với detailed error messages"""
+        """Safe JSON parsing với detailed error messages and validation"""
         import json
         try:
+            if not isinstance(json_str, str):
+                self.error_handler.log_warning(f"Expected string for JSON parsing, got {type(json_str)}", component)
+                return None
+            
+            if not json_str.strip():
+                self.error_handler.log_warning("Empty JSON string provided", component)
+                return None
+                
             return json.loads(json_str)
         except json.JSONDecodeError as e:
-            self.error_handler.log_warning(f"JSON decode error: {e}", component)
+            self.error_handler.log_warning(f"JSON decode error at line {e.lineno}, col {e.colno}: {e.msg}", component)
             return None
         except Exception as e:
             self.error_handler.log_warning(f"Unexpected JSON error: {e}", component)
             return None
+    
+    def safe_numeric_operation(self, value: Any, operation: str = "conversion", component: str = "Math"):
+        """Safe numeric operations with validation"""
+        try:
+            if isinstance(value, (int, float)):
+                return value
+            elif isinstance(value, str):
+                # Try int first, then float
+                try:
+                    return int(value)
+                except ValueError:
+                    return float(value)
+            else:
+                self.error_handler.log_warning(f"Cannot convert {type(value)} to number", component)
+                return 0
+        except (ValueError, TypeError) as e:
+            self.error_handler.log_warning(f"Numeric {operation} error: {e}", component)
+            return 0
+        except Exception as e:
+            self.error_handler.log_warning(f"Unexpected numeric error: {e}", component)
+            return 0
 
 # Global error handler instance - Enhanced
 global_error_handler = ErrorHandler()
