@@ -17,6 +17,10 @@ except ImportError:
     class QObject:
         def __init__(self):
             pass
+    
+    def pyqtSignal(*args, **kwargs):
+        """Fallback pyqtSignal when PyQt6 is not available"""
+        return None
 
 
 class StateManagerQt(QObject):

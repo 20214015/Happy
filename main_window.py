@@ -323,7 +323,7 @@ class MainWindow(QMainWindow, MainWindowOptimizationMixin):
         """Load modern dashboard component"""
         try:
             from components.dashboard_component import create_dashboard_component
-            self.dashboard_component, ui_components = create_dashboard_component(self)
+            self.dashboard_component, ui_components = create_dashboard_component(self, self.mumu_manager)
             if self.dashboard_component:
                 self._connect_dashboard_component_signals()
                 self._assign_dashboard_ui_components(ui_components)
@@ -337,10 +337,10 @@ class MainWindow(QMainWindow, MainWindowOptimizationMixin):
         """Load modern control panel component"""
         try:
             from components.control_panel_component import create_control_panel_component
-            self.control_panel_component, ui_buttons = create_control_panel_component(self)
+            self.control_panel_component = create_control_panel_component(self)
             if self.control_panel_component:
                 self._connect_control_panel_signals()
-                self._assign_control_panel_buttons(ui_buttons)
+                self._assign_control_panel_buttons()
                 print("✅ Control panel component loaded")
             else:
                 print("⚠️ Control panel component creation failed")
@@ -980,7 +980,7 @@ class MainWindow(QMainWindow, MainWindowOptimizationMixin):
             
         try:
             from components.dashboard_component import create_dashboard_component
-            self.dashboard_component, ui_components = create_dashboard_component(self)
+            self.dashboard_component, ui_components = create_dashboard_component(self, self.mumu_manager)
             
             if self.dashboard_component:
                 self._connect_dashboard_component_signals()

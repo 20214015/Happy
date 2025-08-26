@@ -30,6 +30,7 @@ class EventTypes(Enum):
     UI_STATE_CHANGED = auto()
     UI_PAGE_CHANGED = auto()
     UI_RENDER_TIME = auto()
+    UI_REFRESH_REQUESTED = auto()
     
     # Progress Events
     PROGRESS_UPDATE = auto()
