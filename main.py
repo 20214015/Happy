@@ -222,30 +222,6 @@ def _register_fallback_fonts(font_config):
     except Exception as e:
         print(f"⚠️ Fallback font registration warning: {e}")
 
-def _register_fallback_fonts(font_config):
-    """Register fallback font families for better compatibility with safety checks."""
-    try:
-        from PyQt6.QtGui import QFontDatabase
-        
-        # Create font fallback mappings for better rendering
-        all_configs = {**font_config['essential'], **font_config['optional']}
-        
-        # Ensure common font families are available
-        font_db = QFontDatabase()
-        available_families = font_db.families()
-        
-        # Register common programming fonts if available
-        programming_fonts = ['JetBrains Mono', 'Fira Code', 'Source Code Pro', 'Consolas', 'Monaco']
-        available_prog_fonts = [f for f in programming_fonts if f in available_families]
-        
-        if available_prog_fonts:
-            print(f"🔤 Available programming fonts: {', '.join(available_prog_fonts[:3])}")
-        else:
-            print("🔤 Using system monospace fonts for code display")
-            
-    except Exception as e:
-        print(f"⚠️ Fallback font registration warning: {e}")
-
 if __name__ == "__main__":
     # Apply comprehensive warning filtering for clean startup
     import sys

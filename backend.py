@@ -159,10 +159,6 @@ class MumuManager:
             
         except subprocess.TimeoutExpired:
             return False, f"Lỗi: Lệnh bị quá thời gian chờ ({DEFAULT_TIMEOUT}s). Args={' '.join(args)}"
-        except subprocess.CalledProcessError as e:
-            # Note: Không bao giờ đến đây vì check=False
-            error_msg = f"Lỗi thực thi lệnh:\n{e.stderr.strip() if e.stderr else 'Không có thông tin lỗi.'}"
-            return False, error_msg
         except FileNotFoundError:
             return False, f"Lỗi: Không tìm thấy file thực thi '{self.executable_path}'"
         except Exception as e:
