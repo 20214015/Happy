@@ -76,6 +76,11 @@ class MonokaiDashboard(QWidget):
         self.refresh_timer = QTimer()
         self.refresh_timer.timeout.connect(self.auto_refresh)
         
+        # Search debounce timer
+        self.search_timer = QTimer()
+        self.search_timer.setSingleShot(True)
+        self.search_timer.timeout.connect(self._perform_search)
+        
     def set_backend(self, backend):
         """Set backend reference và load data"""
         self.backend = backend
@@ -269,7 +274,7 @@ class MonokaiDashboard(QWidget):
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Search by name or index...")
         self.search_input.setObjectName("SearchInput")
-        self.search_input.textChanged.connect(self.filter_instances)
+        self.search_input.textChanged.connect(self._schedule_search)  # Use debounced search
         layout.addWidget(self.search_input)
         
         # Expose search_input as search_edit for compatibility with MainWindow
@@ -283,7 +288,7 @@ class MonokaiDashboard(QWidget):
         self.status_filter = QComboBox()
         self.status_filter.setObjectName("StatusFilter")
         self.status_filter.addItems(["All", "Running", "Stopped"])
-        self.status_filter.currentTextChanged.connect(self.filter_instances)
+        self.status_filter.currentTextChanged.connect(self._schedule_search)  # Use debounced search
         layout.addWidget(self.status_filter)
         
         # Expose status_filter as filter_combo for compatibility
@@ -834,18 +839,42 @@ class MonokaiDashboard(QWidget):
         self.filter_instances()
         self.update_stats()
         
+    def _schedule_search(self):
+        """Schedule search with debouncing to prevent excessive filtering"""
+        self.search_timer.stop()
+        self.search_timer.start(300)  # 300ms debounce delay
+        
+    def _perform_search(self):
+        """Perform the actual search/filter operation"""
+        self.filter_instances()
+        
     def filter_instances(self):
-        """Lọc instances theo search và status"""
+        """Lọc instances theo search và status với early return optimization"""
         search_text = self.search_input.text().lower()
         status_filter = self.status_filter.currentText()
         
+        # Early return if no data
+        if not self.instances_data:
+            self.filtered_data = []
+            self.populate_table()
+            return
+        
+        # Early return if no filtering needed
+        if not search_text and status_filter == "All":
+            self.filtered_data = self.instances_data.copy()
+            self.populate_table()
+            return
+        
         self.filtered_data = []
         for instance in self.instances_data:
-            # Filter by search text
-            if search_text and search_text not in instance.get('name', '').lower() and search_text not in str(instance.get('index', '')):
-                continue
-                
-            # Filter by status
+            # Early continue for search filter
+            if search_text:
+                name_match = search_text in instance.get('name', '').lower()
+                index_match = search_text in str(instance.get('index', ''))
+                if not (name_match or index_match):
+                    continue
+                    
+            # Early continue for status filter
             if status_filter != "All":
                 instance_status = "Running" if instance.get('status') == 'running' else "Stopped"
                 if status_filter != instance_status:
@@ -864,6 +893,9 @@ class MonokaiDashboard(QWidget):
             # Set row count
             self.instance_table.setRowCount(len(self.filtered_data))
             
+            # Disable updates for batch processing
+            self.instance_table.setUpdatesEnabled(False)
+            
             for row, instance in enumerate(self.filtered_data):
                 try:
                     # Index - Right aligned
@@ -878,7 +910,7 @@ class MonokaiDashboard(QWidget):
                     # Status with proper color coding
                     status = instance.get('status', 'offline')
                     if status == 'running':
-                        status_display = "� Running"
+                        status_display = "🟢 Running"
                         status_color = self.colors['green']
                     elif status == 'starting':
                         status_display = "🟡 Starting"
@@ -891,8 +923,8 @@ class MonokaiDashboard(QWidget):
                     status_item.setForeground(QColor(status_color))
                     self.instance_table.setItem(row, 2, status_item)
                     
-                    # ADB Port
-                    adb_port = instance.get('adb_port', 'N/A')
+                    # ADB Port - fix key consistency
+                    adb_port = instance.get('adb_port', instance.get('adb', 'N/A'))
                     adb_item = QTableWidgetItem(str(adb_port))
                     adb_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                     self.instance_table.setItem(row, 3, adb_item)
@@ -929,8 +961,9 @@ class MonokaiDashboard(QWidget):
                     print(f"⚠️ Error populating row {row}: {e}")
                     continue
             
-            # Bật lại sorting
+            # Bật lại sorting và updates
             self.instance_table.setSortingEnabled(True)
+            self.instance_table.setUpdatesEnabled(True)
             
             # Sync với instances_model cho compatibility
             self.sync_model_data()
@@ -988,8 +1021,10 @@ class MonokaiDashboard(QWidget):
             # CPU usage
             cpu_percent = psutil.cpu_percent(interval=0.1)
             
-            # Disk usage for C: drive (main system drive)
-            disk = psutil.disk_usage('C:')
+            # Disk usage for root filesystem (cross-platform)
+            import os
+            disk_path = 'C:' if os.name == 'nt' else '/'
+            disk = psutil.disk_usage(disk_path)
             disk_total_gb = disk.total / (1024**3)
             disk_used_gb = disk.used / (1024**3)
             disk_percent = (disk.used / disk.total) * 100
@@ -1517,6 +1552,45 @@ class MonokaiDashboard(QWidget):
                 self.restart_instance_requested.emit(instance_id)
         except Exception as e:
             print(f"⚠️ Error restarting instance from context: {e}")
+            
+    def cleanup_resources(self):
+        """Proper resource cleanup to prevent memory leaks"""
+        try:
+            # Stop all timers
+            if hasattr(self, 'refresh_timer') and self.refresh_timer:
+                self.refresh_timer.stop()
+                self.refresh_timer.deleteLater()
+                
+            if hasattr(self, 'search_timer') and self.search_timer:
+                self.search_timer.stop()
+                self.search_timer.deleteLater()
+                
+            if hasattr(self, 'log_timer') and self.log_timer:
+                self.log_timer.stop()
+                self.log_timer.deleteLater()
+                
+            if hasattr(self, 'time_timer') and self.time_timer:
+                self.time_timer.stop()
+                self.time_timer.deleteLater()
+                
+            # Clear table data
+            if hasattr(self, 'instance_table') and self.instance_table:
+                self.instance_table.clear()
+                self.instance_table.setRowCount(0)
+                
+            # Clear data lists
+            self.instances_data.clear()
+            self.filtered_data.clear()
+            
+            print("✅ Resources cleaned up successfully")
+            
+        except Exception as e:
+            print(f"⚠️ Error during resource cleanup: {e}")
+            
+    def closeEvent(self, event):
+        """Handle close event with proper cleanup"""
+        self.cleanup_resources()
+        super().closeEvent(event)
             
     def _show_instance_info(self, row):
         """Show instance information dialog"""
