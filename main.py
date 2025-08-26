@@ -1,5 +1,11 @@
 import sys
 import os
+import time
+
+# Set Qt environment variables BEFORE any Qt imports to suppress warnings
+os.environ['QT_LOGGING_RULES'] = "*.debug=false;qt.qpa.plugin=false;*.warning=false"
+os.environ['QT_ASSUME_STDERR_HAS_CONSOLE'] = '1'
+
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import QSettings
 from PyQt6.QtGui import QFontDatabase
@@ -28,6 +34,9 @@ try:
     from error_handler import global_error_handler, setup_global_exception_handler
     from optimizations.worker_manager import get_global_worker_manager
     from optimizations.performance_monitor import global_performance_monitor
+    from optimizations.qt_optimization import optimize_qt_startup, optimize_qt_application, QtWarningFilter
+    from optimizations.performance_enhancements import optimize_application_performance, measure_performance
+    from optimizations.ai_startup_analytics import start_analytics_session, record_component_load, end_analytics_session
     from constants import ORG_NAME, APP_NAME
     from main_window import MainWindow
     
@@ -238,11 +247,60 @@ def _register_fallback_fonts(font_config):
         print(f"⚠️ Fallback font registration warning: {e}")
 
 if __name__ == "__main__":
-    # Setup global error handling first
-    setup_global_exception_handler()
+    # Apply comprehensive warning filtering for clean startup
+    import sys
+    import io
     
-    # Initialize Qt application
+    class CleanStderr:
+        """Clean stderr that filters Qt warnings"""
+        def __init__(self, original):
+            self.original = original
+            
+        def write(self, text):
+            # Filter out Qt plugin warnings
+            if "propagateSizeHints" not in text and "This plugin does not support" not in text:
+                return self.original.write(text)
+            return len(text)
+            
+        def flush(self):
+            return self.original.flush()
+            
+        def __getattr__(self, name):
+            return getattr(self.original, name)
+    
+    # Install clean stderr
+    sys.stderr = CleanStderr(sys.stderr)
+    
+    # Start AI analytics session
+    session_id = start_analytics_session()
+    print(f"📊 Analytics session started: {session_id}")
+    
+    # Apply Qt optimizations before creating QApplication
+    print("🔧 Applying Qt optimizations...")
+    start_time = time.time()
+    optimize_qt_startup()
+    record_component_load("Qt Optimization", time.time() - start_time)
+    
+    # Apply performance enhancements
+    start_time = time.time()
+    optimize_application_performance()
+    record_component_load("Performance Enhancement", time.time() - start_time)
+    
+    # Setup global error handling first
+    start_time = time.time()
+    setup_global_exception_handler()
+    record_component_load("Error Handler Setup", time.time() - start_time)
+    
+    # Initialize Qt application with optimization
+    start_time = time.time()
     app = QApplication(sys.argv)
+    record_component_load("QApplication Creation", time.time() - start_time)
+    
+    # Apply Qt application optimizations
+    start_time = time.time()
+    optimize_qt_application(app)
+    record_component_load("Qt Application Config", time.time() - start_time)
+    print("✅ Qt optimizations applied")
     
     # Set organization and application info for QSettings
     app.setOrganizationName(AppConstants.ORG_NAME)
@@ -255,12 +313,21 @@ if __name__ == "__main__":
     
     # Apply theme
     print("✅ Applying theme...")
+    start_time = time.time()
     AppTheme.apply_theme(app, settings)
+    record_component_load("Theme Application", time.time() - start_time)
     
     try:
-        # Create main window
+        # Create main window with performance measurement
+        @measure_performance("MainWindow Creation")
+        def create_main_window():
+            start_time = time.time()
+            window = MainWindow()
+            record_component_load("MainWindow", time.time() - start_time)
+            return window
+        
         print("🚀 Creating MainWindow instance...")
-        window = MainWindow()
+        window = create_main_window()
         print("✅ MainWindow created successfully")
         
         # Set up error handler parent for dialogs
@@ -282,6 +349,11 @@ if __name__ == "__main__":
         worker_manager.submit_task("load_fonts", load_fonts)
 
         exit_code = app.exec()
+        
+        # End analytics session and generate insights
+        optimizations_applied = ['qt_optimization', 'performance_enhancement', 'clean_startup', 'ai_analytics']
+        analysis = end_analytics_session(optimizations_applied)
+        print(f"📊 Startup analysis: {analysis.get('status', 'completed')}")
         
     except Exception as e:
         print(f"❌ Exception in ApplicationStartup: {type(e).__name__}: {e}")
