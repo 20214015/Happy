@@ -13,7 +13,7 @@ Version: 1.0 - Production Ready
 import time
 import weakref
 from typing import Dict, List, Any, Optional, Set, Type
-from PyQt6.QtCore import QObject, QTimer, QEvent, pyqtSignal
+from PyQt6.QtCore import QObject, QTimer, QEvent, pyqtSignal, Qt
 from PyQt6.QtWidgets import (QWidget, QApplication, QProgressBar, QLabel, 
                            QPushButton, QLineEdit, QTextEdit, QComboBox)
 from PyQt6.QtGui import QPainter, QPixmap
@@ -370,7 +370,6 @@ class UIOptimizer(QObject):
         
         # Set global style optimizations
         app.setAttribute(Qt.ApplicationAttribute.AA_DontCreateNativeWidgetSiblings, True)
-        app.setAttribute(Qt.ApplicationAttribute.AA_DisableWindowContextHelpButton, True)
         app.setAttribute(Qt.ApplicationAttribute.AA_CompressHighFrequencyEvents, True)
         
         # Install global event filter
