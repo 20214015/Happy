@@ -391,6 +391,9 @@ class AIPerformanceOptimizer(QObject):
         self.enhanced_features_enabled = True
         self.last_action = None
         
+        # Initialize advanced AI systems
+        self._initialize_advanced_ai_systems()
+        
         # Monitoring timer
         self.monitor_timer = None
         self.prediction_interval = 10000  # 10 seconds
@@ -706,6 +709,33 @@ class AIPerformanceOptimizer(QObject):
             except Exception as e:
                 print(f"❌ Resource management insights error: {e}")
         
+        # Add neural network insights
+        try:
+            from .ai_neural_network import get_deep_learning_system
+            dl_system = get_deep_learning_system()
+            dl_insights = dl_system.get_deep_learning_insights()
+            basic_insights['deep_learning'] = dl_insights
+        except Exception as e:
+            print(f"⚠️ Deep learning insights not available: {e}")
+        
+        # Add predictive analytics insights
+        try:
+            from .ai_predictive_analytics import get_predictive_analytics_engine
+            pred_engine = get_predictive_analytics_engine()
+            pred_insights = pred_engine.get_predictive_insights()
+            basic_insights['predictive_analytics'] = pred_insights
+        except Exception as e:
+            print(f"⚠️ Predictive analytics insights not available: {e}")
+        
+        # Add intelligent automation insights
+        try:
+            from .ai_intelligent_automation import get_intelligent_automation_engine
+            auto_engine = get_intelligent_automation_engine()
+            auto_insights = auto_engine.get_automation_insights()
+            basic_insights['intelligent_automation'] = auto_insights
+        except Exception as e:
+            print(f"⚠️ Intelligent automation insights not available: {e}")
+        
         return basic_insights
     
     def _get_basic_insights(self) -> Dict[str, Any]:
@@ -787,6 +817,41 @@ class AIPerformanceOptimizer(QObject):
             self.monitor_timer.stop()
         elif enabled and self.monitor_timer:
             self.monitor_timer.start(self.prediction_interval)
+    
+    def _initialize_advanced_ai_systems(self):
+        """Initialize advanced AI systems (neural networks, predictive analytics, automation)"""
+        try:
+            # Initialize neural network system
+            from .ai_neural_network import get_deep_learning_system
+            self.deep_learning_system = get_deep_learning_system(self.parent())
+            self.deep_learning_available = True
+            print("✅ Deep learning system initialized")
+        except Exception as e:
+            self.deep_learning_system = None
+            self.deep_learning_available = False
+            print(f"⚠️ Deep learning system not available: {e}")
+        
+        try:
+            # Initialize predictive analytics engine
+            from .ai_predictive_analytics import get_predictive_analytics_engine
+            self.predictive_engine = get_predictive_analytics_engine(self.parent())
+            self.predictive_analytics_available = True
+            print("✅ Predictive analytics engine initialized")
+        except Exception as e:
+            self.predictive_engine = None
+            self.predictive_analytics_available = False
+            print(f"⚠️ Predictive analytics not available: {e}")
+        
+        try:
+            # Initialize intelligent automation engine
+            from .ai_intelligent_automation import get_intelligent_automation_engine
+            self.automation_engine = get_intelligent_automation_engine(self.parent())
+            self.intelligent_automation_available = True
+            print("✅ Intelligent automation engine initialized")
+        except Exception as e:
+            self.automation_engine = None
+            self.intelligent_automation_available = False
+            print(f"⚠️ Intelligent automation not available: {e}")
 
 # Global AI optimizer instance
 global_ai_optimizer = None
