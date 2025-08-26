@@ -37,6 +37,12 @@ try:
     from optimizations.qt_optimization import optimize_qt_startup, optimize_qt_application, QtWarningFilter
     from optimizations.performance_enhancements import optimize_application_performance, measure_performance
     from optimizations.ai_startup_analytics import start_analytics_session, record_component_load, end_analytics_session
+    from optimizations.startup_optimizer import get_startup_optimizer
+    from optimizations.font_optimizer import get_font_manager, load_fonts_optimized
+    from optimizations.memory_optimizer import get_memory_optimizer
+    from optimizations.table_optimizer import get_table_optimizer
+    from optimizations.ui_optimizer import get_ui_optimizer, apply_global_ui_optimizations
+    from optimizations.optimization_reporter import get_optimization_reporter, print_optimization_summary
     from constants import ORG_NAME, APP_NAME
     from main_window import MainWindow
     
@@ -48,147 +54,18 @@ except ImportError as e:
     sys.exit(1)
 
 def load_fonts():
-    """Load custom fonts from assets folder with enhanced fallback system and safety checks."""
-    try:
-        # Early safety check for Qt availability and environment
-        try:
-            from PyQt6.QtGui import QFontDatabase
-            from PyQt6.QtWidgets import QApplication
-            
-            # Check if we have a QApplication instance
-            app = QApplication.instance()
-            if app is None:
-                print("⚠️ No QApplication instance - skipping font loading")
-                return
-                
-        except ImportError:
-            print("⚠️ PyQt6 not available - skipping font loading")
-            return
-        except Exception as e:
-            print(f"⚠️ Qt environment check failed: {e} - skipping font loading")
-            return
-        
-        # Check for headless environment and skip if problematic
-        import os
-        if os.environ.get('QT_QPA_PLATFORM') == 'offscreen':
-            print("🔤 Headless environment detected - using simplified font loading")
-            _register_system_fonts_only()
-            return
-        
-        # Determine relative path to assets/fonts folder
-        # Works for both direct execution and PyInstaller packaging
-        if getattr(sys, 'frozen', False):
-            # Running in packaged environment
-            base_path = sys._MEIPASS
-        else:
-            # Running in normal development environment
-            base_path = os.path.dirname(__file__)
-
-        font_dir = os.path.join(base_path, 'assets', 'fonts')
-        
-        if not os.path.isdir(font_dir):
-            print(f"⚠️ Font directory not found at '{font_dir}' - using system fonts")
-            _register_system_fonts_only()
-            return
-
-        # Enhanced font configuration with fallbacks and safety loading
-        font_config = {
-            'essential': {
-                'Inter-Regular.ttf': ['Inter', 'Arial', 'Helvetica'],
-                'Inter-Bold.ttf': ['Inter', 'Arial Bold', 'Helvetica Bold'],
-                'JetBrainsMono-Regular.ttf': ['JetBrains Mono', 'Consolas', 'Monaco', 'Courier New'],
-                'JetBrainsMono-Bold.ttf': ['JetBrains Mono', 'Consolas Bold', 'Monaco Bold', 'Courier New Bold']
-            },
-            'optional': {
-                'JetBrainsMono-Medium.ttf': ['JetBrains Mono Medium', 'JetBrains Mono', 'Consolas'],
-                'JetBrainsMono-Italic.ttf': ['JetBrains Mono Italic', 'JetBrains Mono', 'Consolas Italic'],
-                'JetBrainsMono-Bold-Italic.ttf': ['JetBrains Mono Bold Italic', 'JetBrains Mono Bold', 'Consolas Bold'],
-                'JetBrainsMono-Medium-Italic.ttf': ['JetBrains Mono Medium Italic', 'JetBrains Mono Medium'],
-                'JetBrainsMono-ExtraBold.ttf': ['JetBrains Mono ExtraBold', 'JetBrains Mono Bold'],
-                'JetBrainsMono-ExtraBold-Italic.ttf': ['JetBrains Mono ExtraBold Italic', 'JetBrains Mono Bold Italic']
-            }
-        }
-
-        loaded_count = 0
-        failed_fonts = []
-        
-        # Load essential fonts first with safety checks
-        print("🔤 Loading essential fonts...")
-        for font_file, fallbacks in font_config['essential'].items():
-            font_path = os.path.join(font_dir, font_file)
-            if os.path.isfile(font_path):
-                try:
-                    # Safety check: verify file is readable and valid
-                    with open(font_path, 'rb') as f:
-                        # Read first few bytes to verify it's a valid font file
-                        header = f.read(4)
-                        if len(header) < 4:
-                            print(f"⚠️ Invalid font file (too small): {font_file}")
-                            failed_fonts.append((font_file, fallbacks))
-                            continue
-                    
-                    # Safely attempt to load font
-                    font_id = QFontDatabase.addApplicationFont(font_path)
-                    if font_id != -1:
-                        loaded_count += 1
-                        font_families = QFontDatabase.applicationFontFamilies(font_id)
-                        print(f"✅ Loaded essential font: {font_file} -> {font_families}")
-                    else:
-                        print(f"❌ Failed to load essential font: {font_file} - will use fallback: {fallbacks[1]}")
-                        failed_fonts.append((font_file, fallbacks))
-                except Exception as e:
-                    print(f"❌ Error loading essential font {font_file}: {e}")
-                    failed_fonts.append((font_file, fallbacks))
-            else:
-                print(f"⚠️ Essential font not found: {font_file} - will use fallback: {fallbacks[1]}")
-                failed_fonts.append((font_file, fallbacks))
-        
-        # Load optional fonts with graceful degradation and safety checks
-        print("🔤 Loading optional fonts...")
-        for font_file, fallbacks in font_config['optional'].items():
-            font_path = os.path.join(font_dir, font_file)
-            if os.path.isfile(font_path):
-                try:
-                    # Safety check for optional fonts too
-                    with open(font_path, 'rb') as f:
-                        header = f.read(4)
-                        if len(header) < 4:
-                            failed_fonts.append((font_file, fallbacks))
-                            continue
-                    
-                    font_id = QFontDatabase.addApplicationFont(font_path)
-                    if font_id != -1:
-                        loaded_count += 1
-                        # Silent loading for optional fonts - no print
-                    else:
-                        failed_fonts.append((font_file, fallbacks))
-                except Exception as e:
-                    # Silently handle optional font errors
-                    failed_fonts.append((font_file, fallbacks))
-            else:
-                # For missing optional fonts, create fallback mapping
-                failed_fonts.append((font_file, fallbacks))
-
-        total_fonts = len(font_config['essential']) + len(font_config['optional'])
-        essential_loaded = min(loaded_count, len(font_config['essential']))
-        optional_loaded = max(0, loaded_count - essential_loaded)
-        
-        print(f"✅ Font loading complete: {loaded_count}/{total_fonts} fonts loaded")
-        print(f"   Essential: {essential_loaded}/{len(font_config['essential'])}")
-        print(f"   Optional: {optional_loaded}/{len(font_config['optional'])}")
-        
-        if failed_fonts:
-            print(f"🔧 {len(failed_fonts)} fonts using system fallbacks - performance optimized")
-        
-        # Register fallback fonts in Qt system with safety checks
-        try:
-            _register_fallback_fonts(font_config)
-        except Exception as e:
-            print(f"⚠️ Fallback font registration warning: {e}")
-        
-    except Exception as e:
-        print(f"❌ Error loading fonts: {e} - using system defaults")
-        _register_system_fonts_only()
+    """Load custom fonts with optimized non-blocking approach."""
+    print("🔤 Starting optimized font loading...")
+    
+    # Use optimized font loading system
+    success = load_fonts_optimized()
+    
+    if success:
+        print("✅ Optimized font loading initiated")
+    else:
+        print("⚠️ Font loading fallback to system fonts")
+    
+    return success
 
 def _register_system_fonts_only():
     """Register system fonts only when custom font loading fails."""
@@ -247,6 +124,15 @@ if __name__ == "__main__":
     # Install clean stderr
     sys.stderr = CleanStderr(sys.stderr)
     
+    # Initialize optimization systems
+    print("🚀 Initializing optimization systems...")
+    startup_optimizer = get_startup_optimizer()
+    memory_optimizer = get_memory_optimizer()
+    font_manager = get_font_manager()
+    table_optimizer = get_table_optimizer()
+    ui_optimizer = get_ui_optimizer()
+    optimization_reporter = get_optimization_reporter()
+    
     # Start AI analytics session
     session_id = start_analytics_session()
     print(f"📊 Analytics session started: {session_id}")
@@ -275,6 +161,8 @@ if __name__ == "__main__":
     # Apply Qt application optimizations
     start_time = time.time()
     optimize_qt_application(app)
+    startup_optimizer.optimize_qt_application(app)
+    apply_global_ui_optimizations(app)
     record_component_load("Qt Application Config", time.time() - start_time)
     print("✅ Qt optimizations applied")
     
@@ -287,6 +175,13 @@ if __name__ == "__main__":
     settings = QSettings()
     app_config.update_from_qsettings(settings)
     
+    # Start memory monitoring
+    memory_optimizer.start_monitoring()
+    memory_optimizer.tracker.record_measurement("app_initialization")
+    
+    # Setup immediate font fallbacks (non-blocking)
+    font_manager.setup_immediate_fallbacks()
+    
     # Apply theme
     print("✅ Applying theme...")
     start_time = time.time()
@@ -295,7 +190,7 @@ if __name__ == "__main__":
     
     try:
         # Create main window with performance measurement
-        @measure_performance("MainWindow Creation")
+        @startup_optimizer.measure_performance("MainWindow Creation", critical=True)
         def create_main_window():
             start_time = time.time()
             window = MainWindow()
@@ -313,6 +208,9 @@ if __name__ == "__main__":
         if app_config.get("performance.monitoring_enabled", True):
             global_performance_monitor.start_monitoring()
         
+        # Start progressive component loading in background
+        startup_optimizer.start_progressive_loading()
+        
         global_error_handler.log_info(f"{AppConstants.APP_NAME} {AppConstants.APP_VERSION} started", "Application")
         
         # Show window and run app
@@ -320,16 +218,23 @@ if __name__ == "__main__":
         window.show()
         print("✅ MainWindow shown, starting app loop...")
 
-        # Defer font loading to a background thread for faster startup
+        # Start optimized font loading in background (non-blocking)
         worker_manager = get_global_worker_manager(app)
         worker_manager.submit_task("load_fonts", load_fonts)
+
+        # Record startup complete
+        memory_optimizer.tracker.record_measurement("startup_complete")
 
         exit_code = app.exec()
         
         # End analytics session and generate insights
-        optimizations_applied = ['qt_optimization', 'performance_enhancement', 'clean_startup', 'ai_analytics']
+        optimizations_applied = ['qt_optimization', 'performance_enhancement', 'clean_startup', 'ai_analytics', 'memory_optimization', 'font_optimization', 'ui_optimization', 'table_optimization']
         analysis = end_analytics_session(optimizations_applied)
         print(f"📊 Startup analysis: {analysis.get('status', 'completed')}")
+        
+        # Generate and display optimization report
+        print_optimization_summary()
+        optimization_reporter.save_report()
         
     except Exception as e:
         print(f"❌ Exception in ApplicationStartup: {type(e).__name__}: {e}")
@@ -343,6 +248,9 @@ if __name__ == "__main__":
             # Cleanup on exit
             global_error_handler.log_info("Application shutting down", "Application")
             
+            # Memory optimization cleanup
+            memory_optimizer.cleanup_on_exit()
+            
             # Save configuration
             app_config.save_to_qsettings(settings)
             
@@ -351,6 +259,10 @@ if __name__ == "__main__":
             
             # Stop performance monitoring
             global_performance_monitor.stop_monitoring()
+            
+            # Final memory report
+            memory_report = memory_optimizer.get_optimization_stats()
+            print(f"📊 Final memory usage: {memory_report['memory']['current_mb']}MB")
             
         except Exception as e:
             print(f"Error during cleanup: {e}")
