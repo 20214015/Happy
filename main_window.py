@@ -175,127 +175,197 @@ class MainWindow(QMainWindow, MainWindowOptimizationMixin):
     def __init__(self):
         super().__init__()
         
-        # 🚀 Initialize optimization components first
-        self.init_optimization_components()
+        # 🚀 Modern Service-Oriented Architecture
+        self._init_core_services()
         
+        # 📱 Basic Window Setup
         self.setWindowTitle(f"MuMuManager MKV v{APP_VERSION}")
         self.resize(1600, 900)
 
+        # ⚙️ Core Settings and Backend
         self.settings = QSettings()
         self.mumu_manager = MumuManager(self.settings.value("manager_path", ""))
         
-        # 🚀 SMART CACHE - Performance optimization với intelligent caching và persistence
-        self.smart_cache = global_smart_cache  # Use global instance for consistency
-        # Cache logging sẽ được handle bởi log widget sau khi init
-        self.smart_cache.cache_hit.connect(self._on_cache_hit)
-        self.smart_cache.cache_miss.connect(self._on_cache_miss)
+        # 💾 Initialize State Management
+        self._init_state_management()
         
+        # 🎨 Setup User Interface
+        self._init_ui()
+        self._connect_signals()
+
+        # 🎭 Apply Theme and Styling
+        self._apply_theme_and_styling()
+        
+        # 🚀 Initialize Advanced Features
+        self._init_advanced_features()
+        
+        # 📱 Show Application
+        self.show()
+        
+        print("✅ MainWindow initialized successfully")
+
+    def _init_core_services(self):
+        """Initialize core service architecture"""
+        try:
+            # 🚀 Initialize optimization components using service pattern
+            self.init_optimization_components()
+            print("✅ Core services initialized")
+        except Exception as e:
+            print(f"⚠️ Core services initialization failed: {e}")
+            # Fallback to basic mode
+            self.service_manager = None
+            self.event_manager = None
+            self.state_manager = None
+
+    def _init_state_management(self):
+        """Initialize application state management"""
+        # Core data structures
         self.instance_cache: Dict[str, Any] = {}
         self.instance_ui_states: Dict[int, str] = {}
+        self.loaded_pages = {}
+        
+        # Worker management
         self.worker: Optional[GenericWorker] = None
         self.refresh_worker: Optional[GenericWorker] = None
         self.update_workers: List[GenericWorker] = []
+        
+        # File tracking
         self.found_ota_files: List[str] = []
         self.found_config_files: List[str] = []
         self.failed_indices = set()
         
-        # ✅ LAZY LOADING - Chỉ load tab khi cần
-        self.loaded_pages = {}
-        
-        # 🚀 ADVANCED OPTIMIZATIONS - Performance Systems
-        # ✅ SMART CACHE RE-ENABLED
-        self.global_smart_cache = global_smart_cache
-        self.table_virtualizer = None
-        self.async_initializer = None
-        self.loading_indicator = None
-        
-        # 🧠 MEMORY POOL MANAGEMENT - Phase 3 optimization
-        self.memory_manager = get_memory_manager(self)
-        self.memory_manager.memory_warning.connect(self._on_memory_warning)
-        self.memory_manager.memory_critical.connect(self._on_memory_critical)
-        
-        # 🚀 PROGRESSIVE LOADING - Faster startup with component loading
-        self.startup_optimizer = StartupOptimizer(self)
-        self.progressive_loader = None
-        
-        # 🚀 INTELLIGENT WORKER POOL - Advanced task management (setup later)
-        self.intelligent_worker_pool = IntelligentWorkerPool(max_workers=4, parent=self)
-        # Worker pool signals will be setup in _setup_ui() after log_widget is ready
-        
-        # 🎮 PERFORMANCE ACCELERATION - Hardware-optimized rendering (Phase 3.2)
-        self.acceleration_manager = get_acceleration_manager(self)
-        self.accelerated_table = None
-        
-        # 🤖 GLOBAL AI TRACKER - Real-time instance tracking (Performance optimized)
-        from global_ai_tracker import global_ai_tracker
-        self.global_ai_tracker = global_ai_tracker
-        
-        # Set performance-optimized defaults
-        self.global_ai_tracker.set_debug_mode(False)  # Tắt debug để giảm spam
-        self.global_ai_tracker.set_scan_interval(10000)  # 10 giây để giảm lag
-        
-        # Connect signals với optimized handlers
-        self.global_ai_tracker.instance_status_changed.connect(self._on_ai_instance_status_changed)
-        self.global_ai_tracker.instances_updated.connect(self._on_ai_instances_updated)
-        
-        # AI Control Panel (optional, khởi tạo khi cần)
-        self.ai_control_panel = None
-        
-        # 🧠 AI-POWERED OPTIMIZATION - Machine learning predictions (Phase 4.1)
-        self.ai_optimizer = get_ai_optimizer(self)
-        
-        # ⚡ ULTRA-FAST DATABASE - In-memory SQLite database (Phase 4.2)
-        self.ultra_database = get_ultra_database()
-        
-        # Connect to database immediately
-        try:
-            if self.ultra_database.connect():
-                print("⚡ Ultra-Fast Database connected successfully")
-            else:
-                print("❌ Ultra-Fast Database connection failed")
-                self.ultra_database = None  # Disable if connection fails
-        except Exception as e:
-            print(f"❌ Ultra-Fast Database connection error: {e}")
-            self.ultra_database = None
-        
-        # 🤖 SMART AI TRACKING - Thay thế auto-refresh với AI real-time tracking
-        # Auto-refresh đã được DISABLED vì có Global AI Tracker
-        self.auto_refresh_timer = QTimer()
-        # self.auto_refresh_timer.timeout.connect(self._auto_refresh_instances)  # DISABLED
-        self.auto_refresh_enabled = False  # DISABLED - AI Tracker thay thế
-        self.auto_refresh_interval = self.settings.value("auto_refresh/interval", 30, type=int)  # Giữ lại cho settings
-        
-        # Track user activity để pause auto-refresh khi cần
+        # User activity tracking
         self.user_activity_timer = QTimer()
         self.user_activity_timer.setSingleShot(True)
         self.last_user_activity = time.time()
-        self.user_interaction_delay = 3  # Đợi 3s sau thao tác cuối cùng
+        self.user_interaction_delay = 3
 
-        self._init_ui()
-        self._connect_signals()
-
+    def _apply_theme_and_styling(self):
+        """Apply theme and update UI styling"""
         app = QApplication.instance()
         if app and isinstance(app, QApplication):
             AppTheme.apply_theme(app, self.settings)
+        
         self.update_button_icons()
         if hasattr(self, 'instances_model') and self.instances_model:
             self.instances_model.set_ui_states(self.instance_ui_states)
         self.update_ui_states()
 
-        # 🚀 PROGRESSIVE LOADING - Faster startup with intelligent component loading
-        self._setup_progressive_loading()
-        
-        # Show UI immediately
-        # Setup worker pool signals after UI is ready
-        if hasattr(self, 'intelligent_worker_pool'):
-            self._setup_worker_pool_signals()
-        
-        # Start memory monitoring after UI is ready
-        if hasattr(self, 'memory_manager'):
-            self.memory_manager.start_monitoring(10000)  # Monitor every 10 seconds
-            self.log_message("🧠 Memory Pool Management started", LogLevel.SUCCESS, "Memory")
-        
-        self.show()
+    def _init_advanced_features(self):
+        """Initialize advanced optimization features"""
+        try:
+            # 🧠 Smart Cache System  
+            if hasattr(self, 'global_smart_cache'):
+                self.smart_cache = global_smart_cache
+                self.smart_cache.cache_hit.connect(self._on_cache_hit)
+                self.smart_cache.cache_miss.connect(self._on_cache_miss)
+                print("✅ Smart cache system enabled")
+            
+            # 🤖 AI Tracker Integration
+            self._init_ai_tracker()
+            
+            # ⚡ Performance optimizations
+            self._init_performance_optimizations()
+            
+            # 🚀 Progressive loading
+            self._setup_progressive_loading()
+            
+        except Exception as e:
+            print(f"⚠️ Advanced features initialization failed: {e}")
+            # Continue with basic functionality
+
+    def _init_ai_tracker(self):
+        """Initialize AI tracking system"""
+        try:
+            from global_ai_tracker import global_ai_tracker
+            self.global_ai_tracker = global_ai_tracker
+            
+            # Configure for optimal performance
+            self.global_ai_tracker.set_debug_mode(False)
+            self.global_ai_tracker.set_scan_interval(10000)  # 10 seconds
+            
+            # Connect optimized handlers
+            self.global_ai_tracker.instance_status_changed.connect(self._on_ai_instance_status_changed)
+            self.global_ai_tracker.instances_updated.connect(self._on_ai_instances_updated)
+            
+            print("✅ AI Tracker system enabled")
+        except Exception as e:
+            print(f"⚠️ AI Tracker initialization failed: {e}")
+            self.global_ai_tracker = None
+
+    def _init_performance_optimizations(self):
+        """Initialize performance optimization systems"""
+        try:
+            # Memory management
+            if hasattr(self, 'memory_manager'):
+                self.memory_manager = get_memory_manager(self)
+                self.memory_manager.memory_warning.connect(self._on_memory_warning)
+                self.memory_manager.memory_critical.connect(self._on_memory_critical)
+                self.memory_manager.start_monitoring(10000)
+                print("✅ Memory management enabled")
+            
+            # Worker pool
+            if hasattr(self, 'intelligent_worker_pool'):
+                self.intelligent_worker_pool = IntelligentWorkerPool(max_workers=4, parent=self)
+                self._setup_worker_pool_signals()
+                print("✅ Intelligent worker pool enabled")
+            
+            # AI Optimizer
+            if hasattr(self, 'ai_optimizer'):
+                self.ai_optimizer = get_ai_optimizer(self)
+                print("✅ AI optimizer enabled")
+                
+        except Exception as e:
+            print(f"⚠️ Performance optimizations failed: {e}")
+            # Continue without advanced optimizations
+
+    def _load_dashboard_component(self):
+        """Load modern dashboard component"""
+        try:
+            from components.dashboard_component import create_dashboard_component
+            self.dashboard_component, ui_components = create_dashboard_component(self)
+            if self.dashboard_component:
+                self._connect_dashboard_component_signals()
+                self._assign_dashboard_ui_components(ui_components)
+                print("✅ Dashboard component loaded")
+            else:
+                print("⚠️ Dashboard component creation failed")
+        except Exception as e:
+            print(f"⚠️ Dashboard component loading failed: {e}")
+
+    def _load_control_panel_component(self):
+        """Load modern control panel component"""
+        try:
+            from components.control_panel_component import create_control_panel_component
+            self.control_panel_component, ui_buttons = create_control_panel_component(self)
+            if self.control_panel_component:
+                self._connect_control_panel_signals()
+                self._assign_control_panel_buttons(ui_buttons)
+                print("✅ Control panel component loaded")
+            else:
+                print("⚠️ Control panel component creation failed")
+        except Exception as e:
+            print(f"⚠️ Control panel component loading failed: {e}")
+
+    def _load_status_component(self):
+        """Load modern status component"""
+        try:
+            from components.status_component import create_status_component
+            self.status_component = create_status_component(self)
+            if self.status_component:
+                self._connect_status_component_signals()
+                self._assign_status_component_labels()
+                print("✅ Status component loaded")
+            else:
+                print("⚠️ Status component creation failed")
+        except Exception as e:
+            print(f"⚠️ Status component loading failed: {e}")
+
+    def _connect_status_component_signals(self):
+        """Connect status component signals"""
+        if hasattr(self, 'status_component'):
+            self.status_component.status_updated.connect(self._on_status_updated)
+            self.status_component.progress_updated.connect(self._on_progress_updated)
 
     def _connect_dashboard_component_signals(self):
         """Connect dashboard component signals to main window methods"""
@@ -744,21 +814,53 @@ class MainWindow(QMainWindow, MainWindowOptimizationMixin):
                 pass
 
     def _init_ui(self):
+        """Initialize modern UI with component-based architecture"""
+        self._setup_central_widget()
+        self._setup_layout_structure()
+        self._setup_components()
+
+    def _setup_central_widget(self):
+        """Setup basic central widget structure"""
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
-        main_layout = QHBoxLayout(self.central_widget)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(0)
+        self.main_layout = QHBoxLayout(self.central_widget)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
+        self.main_layout.setSpacing(0)
 
-        self._create_sidebar()
-        self._create_main_content()
+    def _setup_layout_structure(self):
+        """Setup main layout structure with modern patterns"""
+        # Create sidebar and main content areas
+        self._create_modern_sidebar()
+        self._create_modern_main_content()
+        
+        # Add to main layout
+        self.main_layout.addWidget(self.sidebar)
+        self.main_layout.addWidget(self.main_content_widget)
 
-        main_layout.addWidget(self.sidebar)
-        main_layout.addWidget(self.main_content_widget)
+    def _setup_components(self):
+        """Setup modern component-based UI elements"""
+        self._create_modern_status_bar()
+        
+        # Initialize component system if available
+        if hasattr(self, 'service_manager') and self.service_manager:
+            self._init_component_system()
+        else:
+            print("⚠️ Using legacy UI mode - service manager not available")
 
-        self._create_status_bar()
+    def _init_component_system(self):
+        """Initialize modern component system"""
+        try:
+            # Load modular components using service architecture
+            self._load_dashboard_component()
+            self._load_control_panel_component()
+            self._load_status_component()
+            print("✅ Component system initialized")
+        except Exception as e:
+            print(f"⚠️ Component system initialization failed: {e}")
+            # Fall back to legacy UI
 
-    def _create_sidebar(self):
+    def _create_modern_sidebar(self):
+        """Create modern sidebar with improved organization"""
         self.sidebar = QFrame()
         self.sidebar.setObjectName("sidebar")
         self.sidebar.setFixedWidth(240)
@@ -766,153 +868,259 @@ class MainWindow(QMainWindow, MainWindowOptimizationMixin):
         sidebar_layout.setContentsMargins(10, 10, 10, 10)
         sidebar_layout.setSpacing(8)
 
-        title = QLabel(APP_NAME)
+        # Modern app title with version
+        title = QLabel(f"{APP_NAME} v{APP_VERSION}")
         title.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
         sidebar_layout.addWidget(title)
         sidebar_layout.addSpacing(10)
 
+        # Navigation buttons with modern design
+        self._create_modern_navigation_buttons(sidebar_layout)
+        
+        sidebar_layout.addStretch(1)
+
+        # Modern settings section
+        self._create_modern_settings_section(sidebar_layout)
+
+    def _create_modern_navigation_buttons(self, layout):
+        """Create modern navigation buttons"""
         self.sidebar_buttons_map = {
-            "dashboard": (" Dashboard", 0),
-            "apps": (" Quản lý Apps", 1),
-            "adb": (" Công cụ ADB", 2),
-            "script": (" Kịch bản", 3),
-            "cleanup": (" Dọn dẹp Disk", 4),
-            "config": (" Thay Config", 5),
-            "automation": (" Tự động hóa", 6)
+            "dashboard": ("📊 Dashboard", 0),
+            "apps": ("📱 Apps", 1),
+            "adb": ("⚡ ADB Tools", 2),
+            "script": ("📝 Scripts", 3),
+            "cleanup": ("🧹 Cleanup", 4),
+            "config": ("⚙️ Config", 5),
+            "automation": ("🤖 Automation", 6)
         }
 
         self.sidebar_buttons = {}
         for name, (text, index) in self.sidebar_buttons_map.items():
-            btn = QPushButton(text)
+            btn = ModernButton(text, "secondary", "md")
             btn.clicked.connect(lambda _, i=index: self._handle_sidebar_click(i))
-            sidebar_layout.addWidget(btn)
+            layout.addWidget(btn)
             self.sidebar_buttons[name] = btn
 
-        sidebar_layout.addStretch(1)
+    def _create_modern_settings_section(self, layout):
+        """Create modern settings section"""
+        # Settings divider
+        divider = QFrame()
+        divider.setFrameShape(QFrame.Shape.HLine)
+        divider.setFrameShadow(QFrame.Shadow.Sunken)
+        layout.addWidget(divider)
+        
+        # Modern settings buttons
+        self.settings_btn = ModernButton("⚙️ Settings", "secondary", "md")
+        self.theme_toggle_btn = ModernButton("🎨 Theme", "secondary", "md")
+        layout.addWidget(self.settings_btn)
+        layout.addWidget(self.theme_toggle_btn)
 
-        # 🚀 MODERN SETTINGS BUTTONS 
-        self.settings_btn = ModernButton("Cài đặt", "secondary", "md")
-        self.theme_toggle_btn = ModernButton("Giao diện", "secondary", "md")
-        sidebar_layout.addWidget(self.settings_btn)
-        sidebar_layout.addWidget(self.theme_toggle_btn)
-
-    def _create_main_content(self):
+    def _create_modern_main_content(self):
+        """Create modern main content area with lazy loading"""
         self.main_content_widget = QWidget()
         main_layout = QVBoxLayout(self.main_content_widget)
         main_layout.setContentsMargins(10, 10, 10, 10)
 
+        # Modern stacked widget for content
         self.content_stack = QStackedWidget()
         
-        # ✅ LAZY LOADING: Chỉ tạo trang dashboard ban đầu
+        # Load dashboard immediately (most used page)
         dashboard_widget = self._create_dashboard_page()
-        self.content_stack.addWidget(dashboard_widget)  # Index 0
-        self.loaded_pages[0] = True  # Đánh dấu trang dashboard đã load
+        self.content_stack.addWidget(dashboard_widget)
+        self.loaded_pages = {0: True}  # Track loaded pages
 
-        # Tạo các placeholder trống cho các trang khác
-        for i in range(1, 7):  # Apps, Tools, Scripting, Cleanup, Config, Automation
-            placeholder = QWidget()
-            placeholder_layout = QVBoxLayout(placeholder)
-            placeholder_label = QLabel(f"Đang tải trang {i}...")
-            placeholder_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            placeholder_layout.addWidget(placeholder_label)
+        # Create efficient placeholder widgets for lazy loading
+        for i in range(1, 7):
+            placeholder = self._create_loading_placeholder(f"Page {i}")
             self.content_stack.addWidget(placeholder)
             self.loaded_pages[i] = False
 
         main_layout.addWidget(self.content_stack)
         self.content_stack.setCurrentIndex(0)
 
+    def _create_loading_placeholder(self, page_name: str):
+        """Create modern loading placeholder"""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        # Modern loading indicator
+        loading_label = QLabel(f"⏳ Loading {page_name}...")
+        loading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        loading_label.setFont(QFont("Segoe UI", 12))
+        layout.addWidget(loading_label)
+        
+        return widget
+
+    def _create_modern_status_bar(self):
+        """Create modern status bar with component integration"""
+        self._create_status_bar()  # Use existing implementation for now
+
     def _create_dashboard_page(self):
         """
-        Tạo trang dashboard với modular component architecture
-        
-        Phase 2: Sử dụng DashboardComponent cho better maintainability
+        Create modern dashboard page with component-based architecture
         """
+        # Try modern component-based approach first
+        dashboard_widget = self._try_create_component_dashboard()
+        if dashboard_widget:
+            return dashboard_widget
         
-        # 🚀 PHASE 2: Use modular dashboard component
-        # Temporarily disabled to use MonokaiDashboard for full table functionality
-        if False and OPTIMIZATION_AVAILABLE:
-            try:
-                # Create dashboard component
-                self.dashboard_component = create_dashboard_component(self, self.mumu_manager)
-                
-                # Connect component signals to main window methods
+        # Fall back to Monokai dashboard
+        dashboard_widget = self._try_create_monokai_dashboard()
+        if dashboard_widget:
+            return dashboard_widget
+        
+        # Final fallback to standard dashboard
+        return self._create_standard_dashboard()
+
+    def _try_create_component_dashboard(self):
+        """Try to create modern component-based dashboard"""
+        if not OPTIMIZATION_AVAILABLE:
+            return None
+            
+        try:
+            from components.dashboard_component import create_dashboard_component
+            self.dashboard_component, ui_components = create_dashboard_component(self)
+            
+            if self.dashboard_component:
                 self._connect_dashboard_component_signals()
-                
-                # Create dashboard widget
-                dashboard_widget = self.dashboard_component.create_dashboard()
-                
-                # Extract UI components for compatibility
-                ui_components = self.dashboard_component.get_ui_components()
                 self._assign_dashboard_ui_components(ui_components)
+                print("✅ Modern component-based dashboard created")
+                return self.dashboard_component
                 
-                print("🚀 Phase 2: Modular dashboard component created successfully!")
-                return dashboard_widget
-                
-            except Exception as e:
-                print(f"⚠️ Dashboard component creation failed: {e}")
-                print("🔄 Falling back to legacy dashboard")
+        except Exception as e:
+            print(f"⚠️ Component dashboard creation failed: {e}")
         
-        # Legacy dashboard fallback (existing code)
+        return None
+
+    def _try_create_monokai_dashboard(self):
+        """Try to create Monokai-themed dashboard"""
+        if not MONOKAI_AVAILABLE:
+            return None
+            
+        try:
+            self.monokai_dashboard = MonokaiDashboard(self)
+            self.monokai_dashboard.set_backend(self.mumu_manager)
+            
+            # Assign UI components for compatibility
+            self._assign_monokai_dashboard_components()
+            
+            # Setup connections and control panel
+            self._connect_dashboard_signals()
+            self._create_control_panel()
+            self._setup_log_widget()
+            
+            print("✅ Monokai dashboard created successfully")
+            return self.monokai_dashboard
+            
+        except Exception as e:
+            print(f"⚠️ Monokai dashboard creation failed: {e}")
+            
+        return None
+
+    def _assign_monokai_dashboard_components(self):
+        """Assign Monokai dashboard components for compatibility"""
+        # Expose search and filter controls
+        self.search_edit = self.monokai_dashboard.search_edit
+        self.filter_combo = self.monokai_dashboard.filter_combo
+        self.refresh_btn = self.monokai_dashboard.refresh_btn
+        self.btn_auto_refresh = self.monokai_dashboard.btn_auto_refresh
+        self.btn_select_all = self.monokai_dashboard.btn_select_all
+        self.btn_deselect_all = self.monokai_dashboard.btn_deselect_all
         
-        # Try to create MonokaiDashboard first
-        if MONOKAI_AVAILABLE:
-            try:
-                # Use enhanced Monokai dashboard
-                self.monokai_dashboard = MonokaiDashboard(self)
-                # Set backend reference
-                self.monokai_dashboard.set_backend(self.mumu_manager)
-                
-                # Expose controls for compatibility
-                self.search_edit = self.monokai_dashboard.search_edit
-                self.filter_combo = self.monokai_dashboard.filter_combo
-                self.refresh_btn = self.monokai_dashboard.refresh_btn
-                self.btn_auto_refresh = self.monokai_dashboard.btn_auto_refresh
-                self.btn_select_all = self.monokai_dashboard.btn_select_all
-                self.btn_deselect_all = self.monokai_dashboard.btn_deselect_all
-                
-                # Set up table attributes from MonokaiDashboard's instance_table 
-                self.table = self.monokai_dashboard.instance_table
-                # Use model/proxy from MonokaiDashboard for compatibility
-                self.instances_model = self.monokai_dashboard.instances_model
-                self.instances_proxy = self.monokai_dashboard.instances_proxy
-                
-                # Connect dashboard signals to MainWindow methods
-                self._connect_dashboard_signals()
-                
-                # Create control panel for buttons compatibility  
-                self._create_control_panel()
-                
-                # Create log widget for compatibility
-                try:
-                    from enhanced_log_system import EnhancedLogWidget
-                    self.log_widget = EnhancedLogWidget()
-                except Exception as e:
-                    print(f"Warning: Could not create log widget: {e}")
-                    self.log_widget = None
-                
-                print("📊 Monokai dashboard created successfully!")
-                return self.monokai_dashboard
-            except Exception as e:
-                print(f"⚠️ Failed to create Monokai dashboard: {e}")
-                import traceback
-                traceback.print_exc()
-                print("🔄 Using standard dashboard instead")
-        
-        # Standard dashboard fallback - only if Monokai failed
+        # Expose table and models
+        self.table = self.monokai_dashboard.instance_table
+        self.instances_model = self.monokai_dashboard.instances_model
+        self.instances_proxy = self.monokai_dashboard.instances_proxy
+
+    def _setup_log_widget(self):
+        """Setup log widget for dashboard"""
+        try:
+            from enhanced_log_system import EnhancedLogWidget
+            self.log_widget = EnhancedLogWidget()
+        except Exception as e:
+            print(f"⚠️ Log widget creation failed: {e}")
+            self.log_widget = None
+
+    def _create_standard_dashboard(self):
+        """Create standard fallback dashboard"""
         dashboard_widget = QWidget()
         layout = QVBoxLayout(dashboard_widget)
 
+        # Create filter bar
+        self._create_standard_filter_bar(layout)
+        
+        # Create instance table
+        self._create_standard_instance_table(layout)
+        
+        # Create control panel
+        self._create_control_panel()
+        
+        print("✅ Standard dashboard created as fallback")
+        return dashboard_widget
+
+    def _create_standard_filter_bar(self, layout):
+        """Create standard filter bar for dashboard"""
         left_panel_widget = QWidget()
         left_layout = QVBoxLayout(left_panel_widget)
-        left_layout.setContentsMargins(0,0,0,0)
+        left_layout.setContentsMargins(0, 0, 0, 0)
 
         filter_bar = QHBoxLayout()
-        self.search_edit = QLineEdit()
-        self.search_edit.setPlaceholderText("Tìm theo tên hoặc index...")
-        self.filter_combo = QComboBox()
-        self.filter_combo.addItems(["Tất cả", "Đang chạy", "Đã tắt"])
         
-        # 🚀 MODERN CONTROLS - Improved UX with modern styling
+        # Search and filter controls
+        self.search_edit = QLineEdit()
+        self.search_edit.setPlaceholderText("Search by name or index...")
+        
+        self.filter_combo = QComboBox()
+        self.filter_combo.addItems(["All", "Running", "Stopped"])
+        
+        # Modern control buttons
+        self._create_standard_control_buttons(filter_bar)
+        
+        left_layout.addLayout(filter_bar)
+        layout.addWidget(left_panel_widget)
+
+    def _create_standard_control_buttons(self, filter_bar):
+        """Create standard control buttons for filter bar"""
+        self.refresh_btn = ModernButton("🔄 Refresh", "primary", "sm")
+        self.btn_select_all = ModernButton("Select All", "secondary", "sm")
+        self.btn_deselect_all = ModernButton("Deselect All", "secondary", "sm")
+        
+        # AI tracker status (modern replacement for auto-refresh)
+        self.ai_tracker_status = QLabel("🤖 AI Tracker: Ready")
+        self.ai_tracker_status.setStyleSheet("color: #A6E22E; font-weight: bold;")
+        
+        # Add to layout
+        filter_bar.addWidget(QLabel("Search:"))
+        filter_bar.addWidget(self.search_edit)
+        filter_bar.addSpacing(15)
+        filter_bar.addWidget(QLabel("Status:"))
+        filter_bar.addWidget(self.filter_combo)
+        filter_bar.addStretch(1)
+        filter_bar.addWidget(self.btn_select_all)
+        filter_bar.addWidget(self.btn_deselect_all)
+        filter_bar.addWidget(self.refresh_btn)
+        filter_bar.addWidget(self.ai_tracker_status)
+
+    def _create_standard_instance_table(self, layout):
+        """Create standard instance table"""
+        # Create table with modern model/proxy pattern
+        from widgets import InstancesModel, InstancesProxy
+        
+        self.instances_model = InstancesModel(self)
+        self.instances_proxy = InstancesProxy(self)
+        self.instances_proxy.setSourceModel(self.instances_model)
+        
+        # Create table view
+        self.table = QTableView()
+        self.table.setModel(self.instances_proxy)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        
+        # Configure table appearance
+        header = self.table.horizontalHeader()
+        header.setStretchLastSection(True)
+        
+        layout.addWidget(self.table)
         self.btn_select_all = QPushButton("✅ Chọn tất cả")
         self.btn_deselect_all = QPushButton("❌ Bỏ chọn")  
         # Refresh buttons DISABLED - AI Tracker thay thế
@@ -1397,62 +1605,84 @@ class MainWindow(QMainWindow, MainWindowOptimizationMixin):
         self.status_bar.showMessage("✅ Sẵn sàng - UI hiện đại đã được tối ưu!")
 
     def _connect_signals(self):
-        self.settings_btn.clicked.connect(self._open_settings)
-        self.theme_toggle_btn.clicked.connect(self._toggle_theme)
-        
-        # 🚀 ENHANCED DEBOUNCING - Smart delay based on input length
+        """Modern signal connection with organized categories"""
+        self._connect_core_ui_signals()
+        self._connect_search_and_filter_signals()
+        self._connect_table_signals()
+        self._connect_action_button_signals()
+        self._connect_automation_signals()
+
+    def _connect_core_ui_signals(self):
+        """Connect core UI signals (settings, theme, etc.)"""
+        if hasattr(self, 'settings_btn') and self.settings_btn:
+            self.settings_btn.clicked.connect(self._open_settings)
+        if hasattr(self, 'theme_toggle_btn') and self.theme_toggle_btn:
+            self.theme_toggle_btn.clicked.connect(self._toggle_theme)
+
+    def _connect_search_and_filter_signals(self):
+        """Connect modern search and filter signals with smart debouncing"""
+        # Setup smart debouncing timer
         self._filter_debounce = QTimer(self)
         self._filter_debounce.setSingleShot(True)
         self._filter_debounce.timeout.connect(self._apply_filter)
         
-        # Smart debouncing với delay động
+        # Initialize search tracking
         self._last_search_length = 0
         self._search_start_time = None
         
-        self.search_edit.textChanged.connect(self._smart_debounce_search)
-        self.filter_combo.currentTextChanged.connect(lambda: self._filter_debounce.start())
-        # Refresh buttons DISABLED - AI Tracker thay thế
-        # self.refresh_btn.clicked.connect(self.refresh_instances)  # DISABLED
-        # self.btn_auto_refresh.clicked.connect(self._toggle_auto_refresh)  # DISABLED
-        # Context menu already connected in table setup with enhanced tracking
-        if self.instances_model:
+        # Connect search and filter controls
+        if hasattr(self, 'search_edit') and self.search_edit:
+            self.search_edit.textChanged.connect(self._smart_debounce_search)
+        if hasattr(self, 'filter_combo') and self.filter_combo:
+            self.filter_combo.currentTextChanged.connect(lambda: self._filter_debounce.start())
+
+    def _connect_table_signals(self):
+        """Connect table and selection signals"""
+        if hasattr(self, 'instances_model') and self.instances_model:
             self.instances_model.dataChanged.connect(lambda *_: self._update_selection_info())
-        self.table.clicked.connect(self._on_table_clicked)
-        self.btn_select_all.clicked.connect(lambda: self._set_all_checkboxes_state(True))
-        self.btn_deselect_all.clicked.connect(lambda: self._set_all_checkboxes_state(False))
-
-        # 🚀 USER ACTIVITY TRACKING - Theo dõi thao tác user với auto-refresh pause
-        # Add defensive checks for button connections
-        if hasattr(self, 'btn_start_selected') and self.btn_start_selected:
-            self.btn_start_selected.clicked.connect(lambda: [self._on_user_activity(), self._control_selected_instances(Action.LAUNCH)])
-        if hasattr(self, 'btn_stop_selected') and self.btn_stop_selected:
-            self.btn_stop_selected.clicked.connect(lambda: [self._on_user_activity(), self._control_selected_instances(Action.SHUTDOWN)])
-        if hasattr(self, 'btn_restart_selected') and self.btn_restart_selected:
-            self.btn_restart_selected.clicked.connect(lambda: [self._on_user_activity(), self._control_selected_instances(Action.RESTART)])
-        if hasattr(self, 'btn_create') and self.btn_create:
-            self.btn_create.clicked.connect(lambda: [self._on_user_activity(), self._create_instance()])
-        if hasattr(self, 'btn_clone') and self.btn_clone:
-            self.btn_clone.clicked.connect(lambda: [self._on_user_activity(), self._clone_instance()])
-        if hasattr(self, 'btn_delete') and self.btn_delete:
-            self.btn_delete.clicked.connect(lambda: [self._on_user_activity(), self._delete_selected_instances()])
         
-        if hasattr(self, 'btn_batch_edit') and self.btn_batch_edit:
-            self.btn_batch_edit.clicked.connect(lambda: [self._on_user_activity(), self._open_batch_edit_dialog()])
-        if hasattr(self, 'btn_open_settings_editor') and self.btn_open_settings_editor:
-            self.btn_open_settings_editor.clicked.connect(lambda: [self._on_user_activity(), self._open_settings_editor()])
+        if hasattr(self, 'table') and self.table:
+            self.table.clicked.connect(self._on_table_clicked)
+        
+        # Selection buttons
+        if hasattr(self, 'btn_select_all') and self.btn_select_all:
+            self.btn_select_all.clicked.connect(lambda: self._set_all_checkboxes_state(True))
+        if hasattr(self, 'btn_deselect_all') and self.btn_deselect_all:
+            self.btn_deselect_all.clicked.connect(lambda: self._set_all_checkboxes_state(False))
 
-        if hasattr(self, 'btn_auto_start') and self.btn_auto_start:
-            self.btn_auto_start.clicked.connect(self._start_automation)
-        if hasattr(self, 'btn_auto_pause') and self.btn_auto_pause:
-            self.btn_auto_pause.clicked.connect(self._pause_resume_worker)
-        if hasattr(self, 'btn_auto_stop') and self.btn_auto_stop:
-            self.btn_auto_stop.clicked.connect(self._stop_worker)
+    def _connect_action_button_signals(self):
+        """Connect action button signals with user activity tracking"""
+        action_buttons = [
+            ('btn_start_selected', lambda: self._control_selected_instances(Action.LAUNCH)),
+            ('btn_stop_selected', lambda: self._control_selected_instances(Action.SHUTDOWN)),
+            ('btn_restart_selected', lambda: self._control_selected_instances(Action.RESTART)),
+            ('btn_create', self._create_instance),
+            ('btn_clone', self._clone_instance),
+            ('btn_delete', self._delete_selected_instances),
+            ('btn_batch_edit', self._open_batch_edit_dialog),
+            ('btn_open_settings_editor', self._open_settings_editor)
+        ]
+        
+        for btn_name, action in action_buttons:
+            if hasattr(self, btn_name):
+                btn = getattr(self, btn_name)
+                if btn:
+                    # Connect with user activity tracking
+                    btn.clicked.connect(lambda checked, a=action: [self._on_user_activity(), a()])
 
-        # Note: Signals for page-specific buttons are now connected in _connect_page_signals
-        # for lazy loading optimization
-
-        # Page-independent signals only
-        # Note: config_path_edit signal is connected in _connect_page_signals for Config page
+    def _connect_automation_signals(self):
+        """Connect automation control signals"""
+        automation_buttons = [
+            ('btn_auto_start', self._start_automation),
+            ('btn_auto_pause', self._pause_resume_worker),
+            ('btn_auto_stop', self._stop_worker)
+        ]
+        
+        for btn_name, action in automation_buttons:
+            if hasattr(self, btn_name):
+                btn = getattr(self, btn_name)
+                if btn:
+                    btn.clicked.connect(action)
         
     def _connect_dashboard_signals(self):
         """Connect MonokaiDashboard signals to MainWindow methods"""
@@ -1658,149 +1888,46 @@ class MainWindow(QMainWindow, MainWindowOptimizationMixin):
             print(f"Available creators: {list(page_creators.keys())}")
 
     def _smart_debounce_search(self):
-        """🚀 Smart debouncing - delay tùy theo độ dài input và tốc độ gõ"""
-        import time
-        
+        """Modern smart debouncing with adaptive delay based on user behavior"""
+        if not hasattr(self, 'search_edit') or not self.search_edit:
+            return
+            
         current_text = self.search_edit.text()
         current_length = len(current_text)
         current_time = time.time()
         
-        # Tính delay dựa trên:
-        # - Độ dài text: ít text = delay ngắn hơn  
-        # - Tốc độ gõ: gõ nhanh = delay dài hơn
-        if self._search_start_time is None:
-            self._search_start_time = current_time
-            
-        # Base delay
-        if current_length <= 2:
-            base_delay = 100  # Delay ngắn cho 1-2 ký tự
-        elif current_length <= 5:
-            base_delay = 150  # Delay trung bình cho 3-5 ký tự
-        else:
-            base_delay = 200  # Delay dài cho text dài
-            
-        # Adjustment based on typing speed
-        if self._last_search_length > 0:
-            length_diff = abs(current_length - self._last_search_length)
-            if length_diff > 3:  # Typing fast
-                base_delay += 50
-                
-        self._last_search_length = current_length
-        self._filter_debounce.setInterval(base_delay)
-        self._filter_debounce.start()
-        
-        # Reset timer sau 2 giây không activity
-        if current_time - self._search_start_time > 2:
+        # Initialize search tracking if needed
+        if not hasattr(self, '_search_start_time'):
             self._search_start_time = None
-
-
-    def _smart_debounce_search(self):
-        """🚀 Smart debouncing - delay tùy theo độ dài input và tốc độ gõ"""
-        from time import time
+        if not hasattr(self, '_last_search_length'):
+            self._last_search_length = 0
         
-        current_text = self.search_edit.text()
-        current_length = len(current_text)
-        current_time = time()
-        
-        # Tính delay dựa trên:
-        # - Độ dài text: ít text = delay ngắn hơn  
-        # - Tốc độ gõ: gõ nhanh = delay dài hơn
+        # Smart delay calculation based on input characteristics
         if self._search_start_time is None:
             self._search_start_time = current_time
             
-        # Base delay
+        # Adaptive delay based on text length
         if current_length <= 2:
-            base_delay = 100  # Delay ngắn cho 1-2 ký tự
+            base_delay = 100  # Fast response for short queries
         elif current_length <= 5:
-            base_delay = 150  # Delay trung bình cho 3-5 ký tự
+            base_delay = 150  # Medium delay for medium queries
         else:
-            base_delay = 200  # Delay dài cho text dài
+            base_delay = 200  # Longer delay for complex queries
             
-        # Adjustment based on typing speed
+        # Adjust for typing speed
         if self._last_search_length > 0:
             length_diff = abs(current_length - self._last_search_length)
-            if length_diff > 3:  # Typing fast
+            if length_diff > 3:  # Fast typing detected
                 base_delay += 50
                 
         self._last_search_length = current_length
-        self._filter_debounce.setInterval(base_delay)
-        self._filter_debounce.start()
         
-        # Reset timer sau 2 giây không activity
-        if current_time - self._search_start_time > 2:
-            self._search_start_time = None
-
-
-    def _smart_debounce_search(self):
-        """🚀 Smart debouncing - delay tùy theo độ dài input và tốc độ gõ"""
-        from time import time
+        # Apply debounce with modern timer management
+        if hasattr(self, '_filter_debounce') and self._filter_debounce:
+            self._filter_debounce.setInterval(base_delay)
+            self._filter_debounce.start()
         
-        current_text = self.search_edit.text()
-        current_length = len(current_text)
-        current_time = time()
-        
-        # Tính delay dựa trên:
-        # - Độ dài text: ít text = delay ngắn hơn  
-        # - Tốc độ gõ: gõ nhanh = delay dài hơn
-        if self._search_start_time is None:
-            self._search_start_time = current_time
-            
-        # Base delay
-        if current_length <= 2:
-            base_delay = 100  # Delay ngắn cho 1-2 ký tự
-        elif current_length <= 5:
-            base_delay = 150  # Delay trung bình cho 3-5 ký tự
-        else:
-            base_delay = 200  # Delay dài cho text dài
-            
-        # Adjustment based on typing speed
-        if self._last_search_length > 0:
-            length_diff = abs(current_length - self._last_search_length)
-            if length_diff > 3:  # Typing fast
-                base_delay += 50
-                
-        self._last_search_length = current_length
-        self._filter_debounce.setInterval(base_delay)
-        self._filter_debounce.start()
-        
-        # Reset timer sau 2 giây không activity
-        if current_time - self._search_start_time > 2:
-            self._search_start_time = None
-
-
-    def _smart_debounce_search(self):
-        """🚀 Smart debouncing - delay tùy theo độ dài input và tốc độ gõ"""
-        from time import time
-        
-        current_text = self.search_edit.text()
-        current_length = len(current_text)
-        current_time = time()
-        
-        # Tính delay dựa trên:
-        # - Độ dài text: ít text = delay ngắn hơn  
-        # - Tốc độ gõ: gõ nhanh = delay dài hơn
-        if self._search_start_time is None:
-            self._search_start_time = current_time
-            
-        # Base delay
-        if current_length <= 2:
-            base_delay = 100  # Delay ngắn cho 1-2 ký tự
-        elif current_length <= 5:
-            base_delay = 150  # Delay trung bình cho 3-5 ký tự
-        else:
-            base_delay = 200  # Delay dài cho text dài
-            
-        # Adjustment based on typing speed
-        if self._last_search_length > 0:
-            length_diff = abs(current_length - self._last_search_length)
-            if length_diff > 3:  # Typing fast
-                base_delay += 50
-                
-        self._last_search_length = current_length
-        self._filter_debounce.setInterval(base_delay)
-        self._filter_debounce.start()
-        
-        # Reset timer sau 2 giây không activity
+        # Reset tracking after period of inactivity
         if current_time - self._search_start_time > 2:
             self._search_start_time = None
 
