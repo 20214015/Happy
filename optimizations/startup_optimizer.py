@@ -15,7 +15,7 @@ import threading
 import functools
 import weakref
 from typing import Dict, Any, List, Callable, Optional, Union
-from PyQt6.QtCore import QObject, QTimer, pyqtSignal, QThread, QMutex
+from PyQt6.QtCore import QObject, QTimer, pyqtSignal, QThread, QMutex, Qt
 from PyQt6.QtWidgets import QApplication
 
 
