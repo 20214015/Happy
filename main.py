@@ -1,5 +1,10 @@
 import sys
 import os
+
+# Set Qt environment variables BEFORE any Qt imports to suppress warnings
+os.environ['QT_LOGGING_RULES'] = "*.debug=false;qt.qpa.plugin=false;*.warning=false"
+os.environ['QT_ASSUME_STDERR_HAS_CONSOLE'] = '1'
+
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import QSettings
 from PyQt6.QtGui import QFontDatabase
@@ -28,6 +33,8 @@ try:
     from error_handler import global_error_handler, setup_global_exception_handler
     from optimizations.worker_manager import get_global_worker_manager
     from optimizations.performance_monitor import global_performance_monitor
+    from optimizations.qt_optimization import optimize_qt_startup, optimize_qt_application, QtWarningFilter
+    from optimizations.performance_enhancements import optimize_application_performance, measure_performance
     from constants import ORG_NAME, APP_NAME
     from main_window import MainWindow
     
@@ -238,11 +245,46 @@ def _register_fallback_fonts(font_config):
         print(f"⚠️ Fallback font registration warning: {e}")
 
 if __name__ == "__main__":
+    # Apply comprehensive warning filtering for clean startup
+    import sys
+    import io
+    
+    class CleanStderr:
+        """Clean stderr that filters Qt warnings"""
+        def __init__(self, original):
+            self.original = original
+            
+        def write(self, text):
+            # Filter out Qt plugin warnings
+            if "propagateSizeHints" not in text and "This plugin does not support" not in text:
+                return self.original.write(text)
+            return len(text)
+            
+        def flush(self):
+            return self.original.flush()
+            
+        def __getattr__(self, name):
+            return getattr(self.original, name)
+    
+    # Install clean stderr
+    sys.stderr = CleanStderr(sys.stderr)
+    
+    # Apply Qt optimizations before creating QApplication
+    print("🔧 Applying Qt optimizations...")
+    optimize_qt_startup()
+    
+    # Apply performance enhancements
+    optimize_application_performance()
+    
     # Setup global error handling first
     setup_global_exception_handler()
     
-    # Initialize Qt application
+    # Initialize Qt application with optimization
     app = QApplication(sys.argv)
+    
+    # Apply Qt application optimizations
+    optimize_qt_application(app)
+    print("✅ Qt optimizations applied")
     
     # Set organization and application info for QSettings
     app.setOrganizationName(AppConstants.ORG_NAME)
@@ -258,9 +300,13 @@ if __name__ == "__main__":
     AppTheme.apply_theme(app, settings)
     
     try:
-        # Create main window
+        # Create main window with performance measurement
+        @measure_performance("MainWindow Creation")
+        def create_main_window():
+            return MainWindow()
+        
         print("🚀 Creating MainWindow instance...")
-        window = MainWindow()
+        window = create_main_window()
         print("✅ MainWindow created successfully")
         
         # Set up error handler parent for dialogs
