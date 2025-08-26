@@ -323,9 +323,10 @@ class MainWindow(QMainWindow, MainWindowOptimizationMixin):
         """Load modern dashboard component"""
         try:
             from components.dashboard_component import create_dashboard_component
-            self.dashboard_component, ui_components = create_dashboard_component(self, self.mumu_manager)
+            self.dashboard_component = create_dashboard_component(self, self.mumu_manager)
             if self.dashboard_component:
                 self._connect_dashboard_component_signals()
+                ui_components = self.dashboard_component.get_ui_components()
                 self._assign_dashboard_ui_components(ui_components)
                 print("✅ Dashboard component loaded")
             else:
@@ -980,13 +981,14 @@ class MainWindow(QMainWindow, MainWindowOptimizationMixin):
             
         try:
             from components.dashboard_component import create_dashboard_component
-            self.dashboard_component, ui_components = create_dashboard_component(self, self.mumu_manager)
+            self.dashboard_component = create_dashboard_component(self, self.mumu_manager)
             
             if self.dashboard_component:
                 self._connect_dashboard_component_signals()
+                ui_components = self.dashboard_component.get_ui_components()
                 self._assign_dashboard_ui_components(ui_components)
                 print("✅ Modern component-based dashboard created")
-                return self.dashboard_component
+                return self.dashboard_component.create_dashboard()
                 
         except Exception as e:
             print(f"⚠️ Component dashboard creation failed: {e}")
