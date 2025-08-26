@@ -43,6 +43,7 @@ try:
     from optimizations.table_optimizer import get_table_optimizer
     from optimizations.ui_optimizer import get_ui_optimizer, apply_global_ui_optimizations
     from optimizations.optimization_reporter import get_optimization_reporter, print_optimization_summary
+    from optimizations.startup_performance_report import get_startup_performance_reporter, record_startup_timing, print_startup_summary
     from constants import ORG_NAME, APP_NAME
     from main_window import MainWindow
     
@@ -142,11 +143,14 @@ if __name__ == "__main__":
     start_time = time.time()
     optimize_qt_startup()
     record_component_load("Qt Optimization", time.time() - start_time)
+    record_startup_timing("Qt Optimization", time.time() - start_time, "optimization")
     
     # Apply performance enhancements
     start_time = time.time()
     optimize_application_performance()
-    record_component_load("Performance Enhancement", time.time() - start_time)
+    load_time = time.time() - start_time
+    record_component_load("Performance Enhancement", load_time)
+    record_startup_timing("Performance Enhancement", load_time, "optimization")
     
     # Setup global error handling first
     start_time = time.time()
@@ -194,7 +198,9 @@ if __name__ == "__main__":
         def create_main_window():
             start_time = time.time()
             window = MainWindow()
-            record_component_load("MainWindow", time.time() - start_time)
+            load_time = time.time() - start_time
+            record_component_load("MainWindow", load_time)
+            record_startup_timing("MainWindow", load_time, "ui_component")
             return window
         
         print("🚀 Creating MainWindow instance...")
@@ -235,6 +241,9 @@ if __name__ == "__main__":
         # Generate and display optimization report
         print_optimization_summary()
         optimization_reporter.save_report()
+        
+        # Generate startup performance report
+        print_startup_summary()
         
     except Exception as e:
         print(f"❌ Exception in ApplicationStartup: {type(e).__name__}: {e}")

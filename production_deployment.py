@@ -212,7 +212,7 @@ class ProductionDeployment:
             requirements_met = (
                 cpu_count >= 2 and 
                 memory_gb >= 4 and
-                python_version >= '3.8'
+                tuple(map(int, python_version.split('.')[:2])) >= (3, 8)
             )
             
             result = {
